@@ -18,7 +18,7 @@
     "SECURITY.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
-    "SKILL.md"
+    "skills/"
   ],
   "engines": {
     "node": ">=20.11"
@@ -35,7 +35,8 @@
     "smoke": "tsx test/smoke/live-smoke.ts",
     "codegen": "tsx scripts/codegen.ts",
     "spec-lint": "tsx scripts/spec-lint.ts",
-    "verify-pack": "tsx scripts/verify-pack.ts"
+    "verify-pack": "tsx scripts/verify-pack.ts",
+    "skill:validate": "pnpm dlx skills-ref validate skills/raindrop-cli"
   },
   "dependencies": {
     "commander": "^14.0.2",

@@ -112,6 +112,20 @@ Errors are structured JSON on stderr:
 
 See [docs/output.md](docs/output.md) for the full stdout/stderr contract and stable exit codes.
 
+## Agent skill
+
+This repository publishes a `skills.sh`/Agent Skills-compatible skill at [`skills/raindrop-cli/SKILL.md`](skills/raindrop-cli/SKILL.md):
+
+```bash
+npx skills add jvm/raindrop-cli --skill raindrop-cli
+```
+
+Validate the skill locally with:
+
+```bash
+pnpm run skill:validate
+```
+
 ## Documentation
 
 - [Authentication](docs/auth.md)
