@@ -5,7 +5,7 @@ class RaindropCli < Formula
   sha256 "3a8a97a56b7b16dfd2531779ca05b7037e9801ac02ec827048be07e747749282"
   license "MIT"
 
-  depends_on "node@20"
+  depends_on "node"
 
   def install
     system "npm", "install", *std_npm_args
