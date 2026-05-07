@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "cli", "version", "commands"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "cli": { "const": "raindrop" },
+    "version": { "type": "string" },
+    "commands": { "type": "object" }
+  }
+}

@@ -1,0 +1,415 @@
+openapi: "3.0.3"
+info:
+  title: Raindrop.io REST API
+  version: "1.0"
+  description: |
+    OpenAPI representation of the Raindrop.io REST API used by @mocito/raindrop-cli.
+    Based on the official docs at https://developer.raindrop.io/
+    This is an internal reference, not published or redistributed.
+
+servers:
+  - url: https://api.raindrop.io/rest/v1
+    description: Production
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    collectionId:
+      name: collectionId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: "System IDs: 0 = all (except Trash), -1 = Unsorted, -99 = Trash"
+    raindropId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+    perpage:
+      name: perpage
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 50
+    search:
+      name: search
+      in: query
+      schema:
+        type: string
+
+paths:
+  /user:
+    get:
+      operationId: getUser
+      summary: Get authenticated user
+      responses:
+        "200":
+          description: User object
+    put:
+      operationId: updateUser
+      summary: Update authenticated user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Updated user
+
+  /user/stats:
+    get:
+      operationId: getUserStats
+      summary: Get user statistics
+      responses:
+        "200":
+          description: Stats object
+
+  /collections:
+    get:
+      operationId: listRootCollections
+      summary: List root collections
+      responses:
+        "200":
+          description: Array of collections
+    put:
+      operationId: reorderCollections
+      summary: Reorder or expand/collapse collections
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sort:
+                  type: string
+                  enum: [title, -title, count, -count]
+                expanded:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated
+
+  /collections/childrens:
+    get:
+      operationId: listChildCollections
+      summary: List child (nested) collections
+      responses:
+        "200":
+          description: Array of collections
+
+  /collections/merge:
+    put:
+      operationId: mergeCollections
+      summary: Merge collections
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, ids]
+              properties:
+                to:
+                  type: integer
+                ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "200":
+          description: Merged
+
+  /collections/clean:
+    put:
+      operationId: cleanEmptyCollections
+      summary: Remove empty collections
+      responses:
+        "200":
+          description: Cleaned
+
+  /collection/{id}:
+    get:
+      operationId: getCollection
+      summary: Get a single collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Collection object
+    put:
+      operationId: updateCollection
+      summary: Update a collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated collection
+    delete:
+      operationId: deleteCollection
+      summary: Delete a collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /raindrops/{collectionId}:
+    get:
+      operationId: listRaindrops
+      summary: List/search raindrops in a collection
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/perpage"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              [-created, created, score, -sort, title, -title, domain, -domain]
+        - $ref: "#/components/parameters/search"
+      responses:
+        "200":
+          description: Paginated raindrop list
+    post:
+      operationId: bulkCreateRaindrops
+      summary: Create multiple raindrops (max 100)
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 100
+      responses:
+        "200":
+          description: Created raindrops
+    put:
+      operationId: bulkUpdateRaindrops
+      summary: Update multiple raindrops
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Updated
+    delete:
+      operationId: bulkDeleteRaindrops
+      summary: Delete multiple raindrops
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Deleted
+
+  /raindrop:
+    post:
+      operationId: createRaindrop
+      summary: Create a single raindrop
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [link]
+              properties:
+                link:
+                  type: string
+                title:
+                  type: string
+                collection:
+                  type: object
+                  properties:
+                    "$id":
+                      type: integer
+                tags:
+                  type: array
+                  items:
+                    type: string
+                important:
+                  type: boolean
+                pleaseParse:
+                  type: object
+      responses:
+        "200":
+          description: Created raindrop
+
+  /raindrop/{id}:
+    get:
+      operationId: getRaindrop
+      summary: Get a single raindrop
+      parameters:
+        - $ref: "#/components/parameters/raindropId"
+      responses:
+        "200":
+          description: Raindrop object
+    put:
+      operationId: updateRaindrop
+      summary: Update a raindrop
+      parameters:
+        - $ref: "#/components/parameters/raindropId"
+      responses:
+        "200":
+          description: Updated raindrop
+    delete:
+      operationId: deleteRaindrop
+      summary: Delete a raindrop
+      parameters:
+        - $ref: "#/components/parameters/raindropId"
+      responses:
+        "200":
+          description: Deleted
+
+  /tags/{collectionId}:
+    get:
+      operationId: listTags
+      summary: List tags
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Tag list
+    put:
+      operationId: renameOrMergeTags
+      summary: Rename or merge tags
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Updated tags
+    delete:
+      operationId: deleteTags
+      summary: Remove tags
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Deleted
+
+  /filters/{collectionId}:
+    get:
+      operationId: getFilters
+      summary: Get filter counts
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Filter object
+
+  /highlights:
+    get:
+      operationId: listHighlights
+      summary: List all highlights
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/perpage"
+      responses:
+        "200":
+          description: Paginated highlight list
+
+  /highlights/{collectionId}:
+    get:
+      operationId: listHighlightsByCollection
+      summary: List highlights in a collection
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+      responses:
+        "200":
+          description: Highlight list
+
+  /import/url/parse:
+    get:
+      operationId: parseUrl
+      summary: Parse a URL for bookmark metadata
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Parsed metadata
+
+  /import/url/exists:
+    post:
+      operationId: checkUrlExists
+      summary: Check if URLs already exist
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [urls]
+              properties:
+                urls:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Existence check result
+
+  /raindrops/{collectionId}/export.{format}:
+    get:
+      operationId: exportRaindrops
+      summary: Export bookmarks
+      parameters:
+        - $ref: "#/components/parameters/collectionId"
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [csv, html, zip]
+      responses:
+        "200":
+          description: Exported data
+
+  /backups:
+    get:
+      operationId: listBackups
+      summary: List backups
+      responses:
+        "200":
+          description: Backup list
+
+  /backup:
+    get:
+      operationId: generateBackup
+      summary: Trigger backup generation
+      responses:
+        "200":
+          description: Generation started

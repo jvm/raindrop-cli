@@ -1,0 +1,348 @@
+schema_version: "1"
+cli: raindrop
+commands:
+  auth.login:
+    summary: Store a token or OAuth credentials for a profile
+    examples:
+      - printf '%s' "$RAINDROP_ACCESS_TOKEN" | raindrop auth login --token-stdin
+      - raindrop auth login --token <test-token>
+      - raindrop auth login --client-id <id> --client-secret <secret> --redirect-uri http://127.0.0.1:53682/callback
+  auth.status:
+    summary: Show authentication status and token source
+    examples:
+      - raindrop auth status
+  auth.logout:
+    summary: Remove stored credentials for a profile (requires --force)
+    examples:
+      - raindrop auth logout --force
+  auth.refresh:
+    summary: Manually refresh OAuth token
+    examples:
+      - raindrop auth refresh
+  config.path:
+    summary: Print config and credentials file paths
+    examples:
+      - raindrop config path
+  config.list:
+    summary: List all config values with their source (env, profile, file, default)
+    examples:
+      - raindrop config list
+  config.get:
+    summary: Get a single config value
+    examples:
+      - raindrop config get output
+  config.set:
+    summary: Set a config value
+    examples:
+      - raindrop config set output json
+  config.unset:
+    summary: Remove a config value
+    examples:
+      - raindrop config unset default_collection
+  profile.list:
+    summary: List all named profiles
+    examples:
+      - raindrop profile list
+  profile.get:
+    summary: Show profile defaults and auth status
+    examples:
+      - raindrop profile get work
+  profile.save:
+    summary: Save or update a named profile with non-secret defaults
+    examples:
+      - raindrop profile save work --default-collection 123456 --output json
+  profile.use:
+    summary: Set the active profile
+    examples:
+      - raindrop profile use work
+  profile.delete:
+    summary: Delete a named profile (requires --force)
+    examples:
+      - raindrop profile delete work --force
+  user.get:
+    summary: Get authenticated user
+    examples:
+      - raindrop user get
+  user.public:
+    summary: Get a public user by name
+    examples:
+      - raindrop user public <name>
+  user.stats:
+    summary: Get authenticated user statistics
+    examples:
+      - raindrop user stats
+  user.update:
+    summary: Update authenticated user
+    examples:
+      - raindrop user update -d '{"fullName":"New Name"}'
+  collection.list:
+    summary: List root collections
+    examples:
+      - raindrop collection list --human
+  collection.children:
+    summary: List child (nested) collections
+    examples:
+      - raindrop collection children
+  collection.tree:
+    summary: Show full collection tree (roots + children)
+    examples:
+      - raindrop collection tree --human
+  collection.get:
+    summary: Get a single collection by ID
+    examples:
+      - raindrop collection get 123
+  collection.create:
+    summary: Create a new collection
+    examples:
+      - raindrop collection create --title "Reading List" --view list
+  collection.update:
+    summary: Update a collection
+    examples:
+      - raindrop collection update 123 --title "New Title" --public=false
+  collection.delete:
+    summary: Delete a collection (requires --force)
+    examples:
+      - raindrop collection delete 123 --force
+  collection.delete-many:
+    summary: Delete multiple collections (requires --force)
+    examples:
+      - raindrop collection delete-many 1 2 3 --force
+  collection.reorder:
+    summary: Reorder collections by sort key
+    examples:
+      - raindrop collection reorder --sort title
+  collection.expand:
+    summary: Expand all collections in the sidebar
+    examples:
+      - raindrop collection expand --all
+  collection.collapse:
+    summary: Collapse all collections in the sidebar
+    examples:
+      - raindrop collection collapse --all
+  collection.merge:
+    summary: Merge collections into a target
+    examples:
+      - raindrop collection merge --to 123 456 789
+  collection.clean-empty:
+    summary: Remove empty collections (requires --force)
+    examples:
+      - raindrop collection clean-empty --force
+  collection.empty-trash:
+    summary: Permanently empty Trash (requires --force)
+    examples:
+      - raindrop collection empty-trash --force
+  collection.cover.upload:
+    summary: Upload a cover image for a collection
+    examples:
+      - raindrop collection cover upload 123 --file cover.png
+  collection.cover.search:
+    summary: Search for collection covers by text
+    examples:
+      - raindrop collection cover search "nature"
+  collection.cover.featured:
+    summary: List featured collection covers
+    examples:
+      - raindrop collection cover featured
+  collection.sharing.list:
+    summary: List collaborators for a collection
+    examples:
+      - raindrop collection sharing list 123
+  collection.sharing.invite:
+    summary: Invite users to a collection
+    examples:
+      - raindrop collection sharing invite 123 --role viewer --email a@example.com
+  collection.sharing.update:
+    summary: Update a collaborator's role
+    examples:
+      - raindrop collection sharing update 123 456 --role member
+  collection.sharing.remove:
+    summary: Remove a collaborator (requires --force)
+    examples:
+      - raindrop collection sharing remove 123 456 --force
+  collection.sharing.leave:
+    summary: Leave a shared collection (requires --force)
+    examples:
+      - raindrop collection sharing leave 123 --force
+  collection.sharing.join:
+    summary: Join a shared collection with an invite token
+    examples:
+      - raindrop collection sharing join 123 --token <invite-token>
+  bookmark.list:
+    summary: List one bounded page of bookmarks
+    examples:
+      - raindrop bookmark list --collection 0 --limit 50
+      - raindrop bookmark list --collection 0 --sort -created --search "tag:api"
+  bookmark.search:
+    summary: Search bookmarks with a query
+    examples:
+      - raindrop bookmark search "tag:api type:article" --collection 0
+  bookmark.get:
+    summary: Get a single bookmark by ID
+    examples:
+      - raindrop bookmark get 123
+  bookmark.add:
+    summary: Add a URL bookmark with retry-safe duplicate detection
+    examples:
+      - raindrop bookmark add https://developer.raindrop.io --tag api --tag docs
+      - raindrop bookmark add https://example.com --collection 42 --important
+      - raindrop bookmark add https://example.com --allow-duplicate
+  bookmark.create:
+    summary: Create a bookmark with full JSON body
+    examples:
+      - raindrop bookmark create -d '{"link":"https://example.com","title":"Example"}'
+  bookmark.update:
+    summary: Update a bookmark
+    examples:
+      - raindrop bookmark update 123 --title "New Title" --tag archived
+  bookmark.delete:
+    summary: Delete a bookmark (requires --force)
+    examples:
+      - raindrop bookmark delete 123 --force
+  bookmark.upload-file:
+    summary: Upload a file as a bookmark
+    examples:
+      - raindrop bookmark upload-file --file ./paper.pdf --collection 42
+  bookmark.upload-cover:
+    summary: Upload a cover image for a bookmark
+    examples:
+      - raindrop bookmark upload-cover 123 --file cover.png
+  bookmark.download:
+    summary: Download a bookmark cache or cover
+    examples:
+      - raindrop bookmark download 123 --variant cache --output cached.html
+  bookmark.suggest:
+    summary: Get bookmark suggestions by ID or URL
+    examples:
+      - raindrop bookmark suggest 123
+      - raindrop bookmark suggest --url https://example.com
+  bookmark.bulk-create:
+    summary: Create up to 100 bookmarks at once
+    examples:
+      - raindrop bookmark bulk-create -d @bookmarks.json
+  bookmark.bulk-update:
+    summary: Update multiple bookmarks in a collection
+    examples:
+      - raindrop bookmark bulk-update --collection 42 --ids 1,2,3 --tag archived
+  bookmark.bulk-delete:
+    summary: Delete multiple bookmarks (requires --force)
+    examples:
+      - raindrop bookmark bulk-delete --collection 42 --ids 1,2,3 --force
+  tag.list:
+    summary: List tags for a collection
+    examples:
+      - raindrop tag list --collection 0
+  tag.rename:
+    summary: Rename a tag
+    examples:
+      - raindrop tag rename old-name new-name --collection 0
+  tag.merge:
+    summary: Merge multiple tags into one
+    examples:
+      - raindrop tag merge new-name old-a old-b --collection 0
+  tag.delete:
+    summary: Delete tags (requires --force)
+    examples:
+      - raindrop tag delete tag-a tag-b --collection 0 --force
+  filter.get:
+    summary: Get filter counts for a collection
+    examples:
+      - raindrop filter get --collection 0
+  highlight.list:
+    summary: List highlights (all or by collection)
+    examples:
+      - raindrop highlight list --page 0 --limit 50
+      - raindrop highlight list --collection 42
+  highlight.add:
+    summary: Add a highlight to a bookmark
+    examples:
+      - raindrop highlight add 123 --text "quote" --color yellow --note "important"
+  highlight.update:
+    summary: Update a highlight on a bookmark
+    examples:
+      - raindrop highlight update 123 abc --note "new note" --color green
+  highlight.delete:
+    summary: Delete a highlight from a bookmark (requires --force)
+    examples:
+      - raindrop highlight delete 123 abc --force
+  import.parse-url:
+    summary: Parse a URL for bookmark metadata
+    examples:
+      - raindrop import parse-url https://example.com
+  import.exists:
+    summary: Check if URLs already exist as bookmarks
+    examples:
+      - raindrop import exists https://a.example https://b.example
+  import.parse-file:
+    summary: Parse an HTML bookmark import file
+    examples:
+      - raindrop import parse-file --file bookmarks.html
+  export.bookmarks:
+    summary: Export bookmarks as csv, html, or zip
+    examples:
+      - raindrop export bookmarks 0 csv --output bookmarks.csv
+      - raindrop export bookmarks 0 html --deliver=stdout
+  backup.list:
+    summary: List available backups
+    examples:
+      - raindrop backup list
+  backup.generate:
+    summary: Trigger backup generation, optionally wait for completion
+    examples:
+      - raindrop backup generate
+      - raindrop backup generate --wait --timeout 10m
+  backup.download:
+    summary: Download a backup file
+    examples:
+      - raindrop backup download <id> csv --output backup.csv
+  jobs.list:
+    summary: List local async job ledger entries
+    examples:
+      - raindrop jobs list
+  jobs.get:
+    summary: Get a specific job entry
+    examples:
+      - raindrop jobs get <job-id>
+  jobs.prune:
+    summary: Remove old job entries
+    examples:
+      - raindrop jobs prune --older-than 30d
+  feedback:
+    summary: Record local feedback
+    examples:
+      - raindrop feedback "bookmark add returned wrong existing item"
+  feedback.list:
+    summary: List recorded feedback entries
+    examples:
+      - raindrop feedback list
+  feedback.clear:
+    summary: Clear all feedback entries (requires --force)
+    examples:
+      - raindrop feedback clear --force
+  feedback.send:
+    summary: Send feedback to an endpoint
+    examples:
+      - raindrop feedback send --endpoint https://example.com/api/feedback
+  doctor:
+    summary: Run structured config/auth/network/path diagnostics
+    examples:
+      - raindrop doctor
+      - raindrop doctor --fix-permissions
+  agent-context:
+    summary: Print machine-readable CLI context for agents
+    examples:
+      - raindrop agent-context
+      - raindrop agent-context --command bookmark.add
+  api.request:
+    summary: Raw API escape hatch
+    examples:
+      - raindrop api request GET /user
+      - raindrop api request PUT /raindrop/123 -d '{"important":true}'
+  completion:
+    summary: Generate shell completion script
+    examples:
+      - raindrop completion bash
+      - raindrop completion zsh
+  update:
+    summary: Print update instructions
+    examples:
+      - raindrop update

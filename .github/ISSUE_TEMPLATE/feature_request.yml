@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an improvement or new command
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Do not include live credentials or private bookmark data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the command, flags, output, or docs you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Example usage
+      render: bash
+  - type: textarea
+    id: automation
+    attributes:
+      label: Automation contract considerations
+      description: Note any JSON output, exit code, pagination, or safety behavior this feature should preserve.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
