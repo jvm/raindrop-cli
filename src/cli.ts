@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { execFile } from "node:child_process";
-import { openAsBlob } from "node:fs";
+import { openAsBlob, readFileSync, realpathSync } from "node:fs";
 import { createServer } from "node:http";
 import { appendFile, writeFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ApiClient, delay } from "./core/client.js";
 import {
   clearProfileToken,
@@ -58,7 +59,9 @@ import {
   validateLimit,
 } from "./core/validators.js";
 
-const version = "0.1.0";
+const version = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version as string;
 
 type Handler<T extends unknown[] = unknown[]> = (...args: T) => Promise<void>;
 
@@ -3016,6 +3019,18 @@ function agentCommands(): Record<string, any> {
   return out;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isMainModule(): boolean {
+  if (!process.argv[1]) return false;
+  try {
+    return (
+      realpathSync(fileURLToPath(import.meta.url)) ===
+      realpathSync(process.argv[1])
+    );
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
   await buildProgram().parseAsync(process.argv);
 }

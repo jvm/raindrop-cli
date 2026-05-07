@@ -6,10 +6,11 @@ This project aims to follow [Semantic Versioning](https://semver.org/). Breaking
 
 ## [Unreleased]
 
-### Added
+## [0.1.1] - 2026-05-07
 
-- Expanded public documentation for README, authentication, examples, troubleshooting, and contribution workflow.
-- Generated command reference now displays actual shell command syntax.
+### Fixed
+
+- Fixed CLI startup when installed through package-manager symlinks such as Homebrew and npm global bins.
 
 ## [0.1.0] - 2026-05-06
 
