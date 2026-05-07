@@ -6,6 +6,16 @@ This project aims to follow [Semantic Versioning](https://semver.org/). Breaking
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-07
+
+### Added
+
+- Added a `skills.sh` and Agent Skills-compatible `raindrop-cli` skill under `skills/raindrop-cli`.
+
+### Fixed
+
+- Updated the Homebrew formula to depend on the current `node` formula instead of forcing `node@20`.
+
 ## [0.1.1] - 2026-05-07
 
 ### Fixed
