@@ -5,7 +5,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { reportInstallTelemetry } from "../src/core/telemetry.js";
 import { createMockServer, type MockServer } from "./helpers/mock-server.js";
 
-const ENV_KEYS = ["XDG_STATE_HOME", "RAINDROP_TELEMETRY"] as const;
+const ENV_KEYS = [
+  "XDG_STATE_HOME",
+  "RAINDROP_TELEMETRY",
+  "CI",
+  "GITHUB_ACTIONS",
+] as const;
 const ORIGINAL_ENV = Object.fromEntries(
   ENV_KEYS.map((key) => [key, process.env[key]]),
 );
@@ -52,6 +57,15 @@ describe("install telemetry", () => {
   it("respects telemetry opt-out", async () => {
     const mock = await setupTelemetry();
     process.env.RAINDROP_TELEMETRY = "0";
+
+    await reportInstallTelemetry("1.2.3", `${mock.url}/api/report-install`);
+
+    expect(mock.requests).toHaveLength(0);
+  });
+
+  it("does not report from CI", async () => {
+    const mock = await setupTelemetry();
+    process.env.CI = "true";
 
     await reportInstallTelemetry("1.2.3", `${mock.url}/api/report-install`);
 

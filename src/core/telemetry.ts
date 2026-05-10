@@ -21,6 +21,8 @@ function isTruthyEnvFlag(value: string | undefined): boolean {
 
 function isInstallTelemetryEnabled(hasExplicitEndpoint = false): boolean {
   if (process.env.VITEST && !hasExplicitEndpoint) return false;
+  if (isTruthyEnvFlag(process.env.CI)) return false;
+  if (isTruthyEnvFlag(process.env.GITHUB_ACTIONS)) return false;
   if (process.env.RAINDROP_TELEMETRY !== undefined) {
     return isTruthyEnvFlag(process.env.RAINDROP_TELEMETRY);
   }

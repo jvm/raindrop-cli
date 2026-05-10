@@ -6,6 +6,10 @@ This project aims to follow [Semantic Versioning](https://semver.org/). Breaking
 
 ## [Unreleased]
 
+### Fixed
+
+- Disabled install telemetry automatically in CI environments.
+
 ## [0.2.1] - 2026-05-10
 
 ### Added

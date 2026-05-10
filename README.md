@@ -95,7 +95,7 @@ More examples are in [docs/examples.md](docs/examples.md).
 
 ## Install telemetry
 
-`raindrop` sends a best-effort install/update ping once per installed version. Disable it with `RAINDROP_TELEMETRY=0`.
+`raindrop` sends a best-effort install/update ping once per installed version. Disable it with `RAINDROP_TELEMETRY=0`. Telemetry is also disabled automatically when `CI=true` or `GITHUB_ACTIONS=true`.
 
 ## Output contract
 
