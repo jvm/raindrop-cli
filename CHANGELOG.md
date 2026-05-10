@@ -6,7 +6,7 @@ This project aims to follow [Semantic Versioning](https://semver.org/). Breaking
 
 ## [Unreleased]
 
-## [0.2.2] - 2026-05-10
+## [0.2.3] - 2026-05-10
 
 ### Fixed
 

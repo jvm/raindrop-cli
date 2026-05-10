@@ -33,6 +33,8 @@ async function setupTelemetry(): Promise<MockServer> {
   server = await createMockServer();
   stateRoot = await mkdtemp(join(tmpdir(), "rd-install-telemetry-"));
   process.env.XDG_STATE_HOME = stateRoot;
+  delete process.env.CI;
+  delete process.env.GITHUB_ACTIONS;
   server.addRoute({ method: "GET", path: "/api/report-install" });
   return server;
 }
