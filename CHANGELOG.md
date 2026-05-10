@@ -6,6 +6,12 @@ This project aims to follow [Semantic Versioning](https://semver.org/). Breaking
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-10
+
+### Added
+
+- Added best-effort install/update telemetry with `RAINDROP_TELEMETRY=0` opt-out.
+
 ## [0.2.0] - 2026-05-07
 
 ### Added

@@ -93,6 +93,10 @@ raindrop doctor
 
 More examples are in [docs/examples.md](docs/examples.md).
 
+## Install telemetry
+
+`raindrop` sends a best-effort install/update ping once per installed version. Disable it with `RAINDROP_TELEMETRY=0`.
+
 ## Output contract
 
 Success output is JSON by default. Human output is opt-in with `--human` where available.

@@ -43,6 +43,7 @@ import {
 } from "./core/output.js";
 import { parseData, readStdin, mergeBody } from "./core/body.js";
 import { postWebhook } from "./core/webhook.js";
+import { reportInstallTelemetry } from "./core/telemetry.js";
 import {
   assertRegularFile,
   backupFormats,
@@ -3032,5 +3033,6 @@ function isMainModule(): boolean {
 }
 
 if (isMainModule()) {
+  void reportInstallTelemetry(version);
   await buildProgram().parseAsync(process.argv);
 }
