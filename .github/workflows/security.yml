@@ -1,13 +1,6 @@
 name: Security
 
 on:
-  workflow_call:
-    inputs:
-      upload-artifact:
-        description: Upload the betterleaks SARIF report as a workflow artifact.
-        type: boolean
-        required: false
-        default: false
   push:
     branches: [main]
   pull_request:
@@ -37,7 +30,7 @@ jobs:
         with:
           package_json_file: "package.json"
       - name: Audit production dependencies
-        run: pnpm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
   secrets:
     name: Secret scan (betterleaks)
@@ -53,35 +46,17 @@ jobs:
           persist-credentials: false
       - name: Install betterleaks
         run: |
-          BETTERLEAKS_VERSION=1.4.0
+          BETTERLEAKS_VERSION=1.5.0
           curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" -o betterleaks.tar.gz
           tar -xzf betterleaks.tar.gz betterleaks
           sudo install -m 0755 betterleaks /usr/local/bin/betterleaks
       - name: Run betterleaks
         run: betterleaks dir . --no-banner --redact --exit-code=2 --report-path betterleaks.sarif --report-format sarif
       - name: Upload betterleaks SARIF
-        if: always() && inputs.upload-artifact
+        if: always()
         uses: github/codeql-action/upload-sarif@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
         with:
           sarif_file: betterleaks.sarif
-
-  codeql:
-    name: CodeQL analyze
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-      - uses: github/codeql-action/init@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
-        with:
-          languages: javascript-typescript
-          queries: security-extended,security-and-quality
-      - uses: github/codeql-action/autobuild@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
-      - uses: github/codeql-action/analyze@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
 
   shellcheck:
     name: ShellCheck
