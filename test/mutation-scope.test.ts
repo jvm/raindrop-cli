@@ -2,33 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-scope-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("mutation scope on bookmark commands", () => {
   it("bookmark add JSON includes target without collection title lookup", async () => {
@@ -53,7 +28,7 @@ describe("mutation scope on bookmark commands", () => {
         status: 200,
         body: { result: true, item: { _id: 123, title: "Reading list" } },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -63,8 +38,7 @@ describe("mutation scope on bookmark commands", () => {
           "--collection",
           "123",
         ],
-        { RAINDROP_ACCESS_TOKEN: "tok" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -104,7 +78,7 @@ describe("mutation scope on bookmark commands", () => {
         status: 200,
         body: { result: true, item: { _id: 0, title: "All" } },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--human",
           "--base-url",
@@ -115,8 +89,7 @@ describe("mutation scope on bookmark commands", () => {
           "--collection",
           "0",
         ],
-        { RAINDROP_ACCESS_TOKEN: "tok" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       expect(result.stderr).toMatch(/-> profile=default collection=/);
@@ -142,7 +115,7 @@ describe("mutation scope on bookmark commands", () => {
         status: 200,
         body: { result: true, item: { _id: 1 } },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -152,8 +125,7 @@ describe("mutation scope on bookmark commands", () => {
           "--collection",
           "-1",
         ],
-        { RAINDROP_ACCESS_TOKEN: "tok" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);

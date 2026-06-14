@@ -1,35 +1,9 @@
-import { rm } from "node:fs/promises";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const exec = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-import-")));
-  try {
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("import commands", () => {
   it("import exists treats result:false as data with exit 0", async () => {
@@ -44,7 +18,7 @@ describe("import commands", () => {
         body: { result: false },
       });
 
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           `${mock.url}`,
@@ -52,8 +26,7 @@ describe("import commands", () => {
           "exists",
           "https://new.example.com",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -78,7 +51,7 @@ describe("import commands", () => {
         },
       });
 
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           `${mock.url}`,
@@ -86,8 +59,7 @@ describe("import commands", () => {
           "exists",
           "https://found.example.com",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);

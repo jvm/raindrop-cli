@@ -2,33 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-bres-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("backup generate jobs ledger resume", () => {
   it("baseline backup id is captured before generate", async () => {
@@ -48,10 +23,9 @@ describe("backup generate jobs ledger resume", () => {
         status: 200,
         body: { result: true },
       });
-      const result = await run(
+      const result = await runCli(
         ["--base-url", mock.url, "backup", "generate"],
-        { RAINDROP_ACCESS_TOKEN: "tok" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -87,7 +61,7 @@ describe("backup generate jobs ledger resume", () => {
         status: 200,
         body: { result: true, items: [{ _id: 10 }] },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -101,10 +75,12 @@ describe("backup generate jobs ledger resume", () => {
           "5s",
         ],
         {
-          RAINDROP_ACCESS_TOKEN: "tok",
-          XDG_STATE_HOME: join(dir, "state"),
+          env: {
+            RAINDROP_ACCESS_TOKEN: "tok",
+            XDG_STATE_HOME: join(dir, "state"),
+          },
+          configDir: dir,
         },
-        dir,
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);

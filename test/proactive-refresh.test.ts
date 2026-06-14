@@ -2,33 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-refresh-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("proactive token refresh near expiry", () => {
   it("refreshes before request when expires_at is within skew window", async () => {
@@ -70,11 +45,10 @@ describe("proactive token refresh near expiry", () => {
         status: 200,
         body: { result: true, user: { _id: 1, email: "me@example.com" } },
       });
-      const result = await run(
-        ["--base-url", mock.url, "user", "get"],
-        { RAINDROP_TOKEN_URL: `${mock.url}/oauth/access_token` },
-        dir,
-      );
+      const result = await runCli(["--base-url", mock.url, "user", "get"], {
+        env: { RAINDROP_TOKEN_URL: `${mock.url}/oauth/access_token` },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       // The request to /user should have used the fresh token
       const userRequest = mock.requests.find((r) => r.url === "/user");
@@ -119,11 +93,10 @@ describe("proactive token refresh near expiry", () => {
         status: 200,
         body: { result: true, user: { _id: 1 } },
       });
-      const result = await run(
-        ["--base-url", mock.url, "user", "get"],
-        { RAINDROP_TOKEN_URL: `${mock.url}/oauth/access_token` },
-        dir,
-      );
+      const result = await runCli(["--base-url", mock.url, "user", "get"], {
+        env: { RAINDROP_TOKEN_URL: `${mock.url}/oauth/access_token` },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const userRequest = mock.requests.find((r) => r.url === "/user");
       expect(userRequest!.headers["authorization"]).toBe("Bearer fresh-enough");
@@ -164,14 +137,13 @@ describe("proactive token refresh near expiry", () => {
         status: 200,
         body: { result: true, user: { _id: 1 } },
       });
-      const result = await run(
-        ["--base-url", mock.url, "user", "get"],
-        {
+      const result = await runCli(["--base-url", mock.url, "user", "get"], {
+        env: {
           RAINDROP_ACCESS_TOKEN: "env-token",
           RAINDROP_TOKEN_URL: `${mock.url}/oauth/access_token`,
         },
-        dir,
-      );
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const userRequest = mock.requests.find((r) => r.url === "/user");
       expect(userRequest!.headers["authorization"]).toBe("Bearer env-token");

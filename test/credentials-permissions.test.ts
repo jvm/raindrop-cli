@@ -3,41 +3,15 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const exec = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-cred-")));
-  try {
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
+import { runCli } from "./helpers/run-cli.js";
 
 describe("credentials permissions", () => {
   it("stores credentials with 0600 permissions", async () => {
     const dir = await mkdtemp(join(tmpdir(), "rd-cred-"));
     try {
-      const result = await run(
+      const result = await runCli(
         ["auth", "login", "--token", "my-secret-token"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
 
@@ -75,7 +49,7 @@ describe("credentials permissions", () => {
         await chmod(join(dir, "credentials.json"), 0o644);
       }
 
-      const result = await run(["auth", "status"], {}, dir);
+      const result = await runCli(["auth", "status"], { configDir: dir });
       if (process.platform !== "win32") {
         expect(result.code).not.toBe(0);
         const err = JSON.parse(result.stderr);
@@ -89,10 +63,9 @@ describe("credentials permissions", () => {
   it("stores token in named profile", async () => {
     const dir = await mkdtemp(join(tmpdir(), "rd-cred-"));
     try {
-      const result = await run(
+      const result = await runCli(
         ["--profile", "work", "auth", "login", "--token", "work-token"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -111,9 +84,13 @@ describe("credentials permissions", () => {
     const dir = await mkdtemp(join(tmpdir(), "rd-cred-"));
     try {
       // Login
-      await run(["auth", "login", "--token", "tok", "--force"], {}, dir);
+      await runCli(["auth", "login", "--token", "tok", "--force"], {
+        configDir: dir,
+      });
       // Logout
-      const result = await run(["auth", "logout", "--force"], {}, dir);
+      const result = await runCli(["auth", "logout", "--force"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
 
       const content = JSON.parse(

@@ -2,33 +2,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const exec = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-delivery-")));
-  try {
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 async function setupDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "rd-delivery-"));
@@ -48,7 +23,7 @@ describe("delivery", () => {
         headers: { "Content-Type": "text/csv" },
       });
 
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           `${mock.url}`,
@@ -59,8 +34,7 @@ describe("delivery", () => {
           "--output",
           join(outDir, "test.csv"),
         ],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -93,7 +67,7 @@ describe("delivery", () => {
         body: "new content",
       });
 
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           `${mock.url}`,
@@ -104,8 +78,7 @@ describe("delivery", () => {
           "--output",
           join(outDir, "exists.csv"),
         ],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).not.toBe(0);
       const err = JSON.parse(result.stderr);
@@ -136,7 +109,7 @@ describe("delivery", () => {
         headers: { "Content-Type": "text/csv" },
       });
 
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           `${mock.url}`,
@@ -148,8 +121,7 @@ describe("delivery", () => {
           join(outDir, "old.csv"),
           "--force",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
 
@@ -165,7 +137,7 @@ describe("delivery", () => {
   it("rejects --output and --deliver together", async () => {
     const dir = await setupDir();
     try {
-      const result = await run(
+      const result = await runCli(
         [
           "export",
           "bookmarks",
@@ -176,8 +148,7 @@ describe("delivery", () => {
           "--deliver",
           "file:b.csv",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(2);
       const err = JSON.parse(result.stderr);
@@ -190,10 +161,9 @@ describe("delivery", () => {
   it("rejects unsupported delivery schemes before network", async () => {
     const dir = await setupDir();
     try {
-      const result = await run(
+      const result = await runCli(
         ["export", "bookmarks", "0", "csv", "--deliver", "ftp://bad"],
-        { RAINDROP_ACCESS_TOKEN: "test-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(2);
       const err = JSON.parse(result.stderr);

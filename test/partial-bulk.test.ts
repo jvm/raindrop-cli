@@ -2,33 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-partial-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("partial bulk exit code", () => {
   it("bulk-update returns exit 6 when modified < requested", async () => {
@@ -41,7 +16,7 @@ describe("partial bulk exit code", () => {
         status: 200,
         body: { result: true, modified: 1 },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -54,8 +29,7 @@ describe("partial bulk exit code", () => {
           "--tag",
           "archived",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(6);
       const parsed = JSON.parse(result.stdout);
@@ -78,7 +52,7 @@ describe("partial bulk exit code", () => {
         status: 200,
         body: { result: true, modified: 2 },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -90,8 +64,7 @@ describe("partial bulk exit code", () => {
           "1,2,3,4",
           "--force",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(6);
       const parsed = JSON.parse(result.stdout);
@@ -117,7 +90,7 @@ describe("partial bulk exit code", () => {
       const body = {
         items: [{ link: "https://a.example" }, { link: "https://b.example" }],
       };
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -126,8 +99,7 @@ describe("partial bulk exit code", () => {
           "-d",
           JSON.stringify(body),
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(6);
       const parsed = JSON.parse(result.stdout);
@@ -150,7 +122,7 @@ describe("partial bulk exit code", () => {
         status: 200,
         body: { result: true, modified: 1 },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -161,8 +133,7 @@ describe("partial bulk exit code", () => {
           "3",
           "--force",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(6);
       const parsed = JSON.parse(result.stdout);
@@ -183,7 +154,7 @@ describe("partial bulk exit code", () => {
         status: 200,
         body: { result: true, modified: 3 },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -196,8 +167,7 @@ describe("partial bulk exit code", () => {
           "--tag",
           "archived",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);

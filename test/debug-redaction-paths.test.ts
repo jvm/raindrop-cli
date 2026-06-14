@@ -2,33 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-redact-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("debug redaction across command paths", () => {
   it("does not echo Authorization header in --debug output", async () => {
@@ -41,10 +16,12 @@ describe("debug redaction across command paths", () => {
         status: 200,
         body: { result: true, user: { _id: 1, email: "x@y" } },
       });
-      const result = await run(
+      const result = await runCli(
         ["--base-url", mock.url, "--debug", "user", "get"],
-        { RAINDROP_ACCESS_TOKEN: "super-secret-token" },
-        dir,
+        {
+          env: { RAINDROP_ACCESS_TOKEN: "super-secret-token" },
+          configDir: dir,
+        },
       );
       expect(result.code).toBe(0);
       expect(result.stderr).not.toContain("super-secret-token");
@@ -71,7 +48,7 @@ describe("debug redaction across command paths", () => {
           nested: { authorization: "Bearer xxx" },
         },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -80,8 +57,7 @@ describe("debug redaction across command paths", () => {
           "-d",
           JSON.stringify({ link: "https://x.example" }),
         ],
-        { RAINDROP_ACCESS_TOKEN: "tok" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).not.toBe(0);
       expect(result.stderr).not.toContain("leaked-from-server");
@@ -115,7 +91,9 @@ describe("debug redaction across command paths", () => {
         }),
         { mode: 0o600 },
       );
-      const result = await run(["--debug", "auth", "status"], {}, dir);
+      const result = await runCli(["--debug", "auth", "status"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       expect(result.stdout).not.toContain("stored-secret-12345");
       expect(result.stdout).not.toContain("refresh-secret-67890");
@@ -142,7 +120,7 @@ describe("debug redaction across command paths", () => {
         }),
         { mode: 0o600 },
       );
-      const result = await run(["config", "list"], {}, dir);
+      const result = await runCli(["config", "list"], { configDir: dir });
       expect(result.stdout).not.toContain("config-list-leak");
       expect(result.stdout).not.toContain("config-list-secret");
     } finally {
@@ -174,7 +152,7 @@ describe("debug redaction across command paths", () => {
         }),
         "utf8",
       );
-      const result = await run(["agent-context"], {}, dir);
+      const result = await runCli(["agent-context"], { configDir: dir });
       expect(result.code).toBe(0);
       expect(result.stdout).not.toContain("agent-context-leak-test");
       expect(result.stdout).not.toContain("another-leak");
@@ -200,7 +178,7 @@ describe("debug redaction across command paths", () => {
           token: "leaked-token-payload",
         },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -210,8 +188,7 @@ describe("debug redaction across command paths", () => {
           "-d",
           JSON.stringify({ link: "https://x.example" }),
         ],
-        { RAINDROP_ACCESS_TOKEN: "tok" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).not.toBe(0);
       expect(result.stderr).not.toContain("leaked-token-payload");

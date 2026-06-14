@@ -2,33 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-ifver-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe("highlight --if-version", () => {
   it("rejects on lastUpdate mismatch with exit 2", async () => {
@@ -48,7 +23,7 @@ describe("highlight --if-version", () => {
           },
         },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -62,8 +37,7 @@ describe("highlight --if-version", () => {
           "--if-version",
           "2025-12-31T00:00:00Z",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(2);
       const err = JSON.parse(result.stderr);
@@ -97,7 +71,7 @@ describe("highlight --if-version", () => {
         status: 200,
         body: { result: true, item: { _id: 42 } },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -111,8 +85,7 @@ describe("highlight --if-version", () => {
           "--if-version",
           "2026-05-06T12:00:00Z",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(0);
     } finally {
@@ -131,7 +104,7 @@ describe("highlight --if-version", () => {
         status: 200,
         body: { result: true, item: { _id: 42, highlights: [] } },
       });
-      const result = await run(
+      const result = await runCli(
         [
           "--base-url",
           mock.url,
@@ -143,8 +116,7 @@ describe("highlight --if-version", () => {
           "--if-version",
           "v1",
         ],
-        { RAINDROP_ACCESS_TOKEN: "test" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(2);
       const err = JSON.parse(result.stderr);

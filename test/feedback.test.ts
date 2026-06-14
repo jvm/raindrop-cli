@@ -3,114 +3,119 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 
-const exec = promisify(execFile);
+async function setupDir(): Promise<{ dir: string; stateHome: string }> {
+  const dir = await mkdtemp(join(tmpdir(), "rd-fb-"));
+  const stateHome = join(dir, "state");
+  await mkdir(stateHome, { recursive: true });
+  return { dir, stateHome };
+}
 
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-fb-")));
-  try {
-    // Feedback uses state dir, not config dir, so we need to also set RAINDROP_CONFIG_DIR
-    // to isolate the state dir. The paths module uses XDG_STATE_HOME for state.
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: {
-        ...process.env,
-        RAINDROP_CONFIG_DIR: dir,
-        XDG_STATE_HOME: join(dir, "state"),
-        ...env,
-      },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
+async function cleanup(dir: string): Promise<void> {
+  await rm(dir, { recursive: true, force: true });
 }
 
 describe("feedback", () => {
   it("records a feedback entry", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "rd-fb-"));
+    const { dir, stateHome } = await setupDir();
     try {
-      const result = await run(["feedback", "test issue report"], {}, dir);
+      const result = await runCli(["feedback", "test issue report"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.result).toBe(true);
       expect(parsed.entry.message).toBe("test issue report");
       expect(parsed.entry.ts).toBeDefined();
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await cleanup(dir);
     }
   });
 
   it("lists feedback entries", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "rd-fb-"));
+    const { dir, stateHome } = await setupDir();
     try {
-      await run(["feedback", "first feedback"], {}, dir);
-      await run(["feedback", "second feedback"], {}, dir);
+      await runCli(["feedback", "first feedback"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
+      await runCli(["feedback", "second feedback"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
 
-      const result = await run(["feedback", "list"], {}, dir);
+      const result = await runCli(["feedback", "list"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.items).toHaveLength(2);
       expect(parsed.items[0].message).toBe("first feedback");
       expect(parsed.items[1].message).toBe("second feedback");
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await cleanup(dir);
     }
   });
 
   it("clears feedback with --force", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "rd-fb-"));
+    const { dir, stateHome } = await setupDir();
     try {
-      await run(["feedback", "to be cleared"], {}, dir);
+      await runCli(["feedback", "to be cleared"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
 
-      const result = await run(["feedback", "clear", "--force"], {}, dir);
+      const result = await runCli(["feedback", "clear", "--force"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
 
       // Verify empty
-      const listResult = await run(["feedback", "list"], {}, dir);
+      const listResult = await runCli(["feedback", "list"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
       const parsed = JSON.parse(listResult.stdout);
       expect(parsed.items).toHaveLength(0);
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await cleanup(dir);
     }
   });
 
   it("feedback clear requires --force", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "rd-fb-"));
+    const { dir, stateHome } = await setupDir();
     try {
-      await mkdir(join(dir, "state", "raindrop"), { recursive: true });
-      const result = await run(["feedback", "clear"], {}, dir);
+      const result = await runCli(["feedback", "clear"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
       expect(result.code).toBe(2);
       const err = JSON.parse(result.stderr);
       expect(err.error.code).toBe("force_required");
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await cleanup(dir);
     }
   });
 
   it("persists feedback to JSONL file", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "rd-fb-"));
+    const { dir, stateHome } = await setupDir();
     try {
-      await run(["feedback", "jsonl test"], {}, dir);
+      await runCli(["feedback", "jsonl test"], {
+        env: { XDG_STATE_HOME: stateHome },
+        configDir: dir,
+      });
 
-      const fbPath = join(dir, "state", "raindrop", "feedback.jsonl");
+      const fbPath = join(stateHome, "raindrop", "feedback.jsonl");
       const content = await readFile(fbPath, "utf8");
       const entry = JSON.parse(content.trim());
       expect(entry.message).toBe("jsonl test");
       expect(entry.ts).toBeDefined();
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await cleanup(dir);
     }
   });
 });

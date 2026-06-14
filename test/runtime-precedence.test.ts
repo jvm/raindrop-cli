@@ -3,32 +3,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const exec = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-runtime-")));
-  try {
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
+import { runCli } from "./helpers/run-cli.js";
 
 async function setupConfigDir(files: Record<string, string>): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "rd-runtime-"));
@@ -47,7 +22,7 @@ describe("runtime precedence", () => {
   it("defaults to json output", async () => {
     const dir = await setupConfigDir({});
     try {
-      const result = await run(["config", "list"], {}, dir);
+      const result = await runCli(["config", "list"], { configDir: dir });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.output.value).toBe("json");
@@ -62,7 +37,7 @@ describe("runtime precedence", () => {
       "config.toml": 'output = "human"',
     });
     try {
-      const result = await run(["config", "list"], {}, dir);
+      const result = await runCli(["config", "list"], { configDir: dir });
       expect(result.code).toBe(0);
       // Output should be human because config sets output=human
       expect(result.stdout).not.toMatch(/^\s*\{/);
@@ -77,11 +52,10 @@ describe("runtime precedence", () => {
       "config.toml": 'output = "human"',
     });
     try {
-      const result = await run(
-        ["config", "list"],
-        { RAINDROP_OUTPUT: "json" },
-        dir,
-      );
+      const result = await runCli(["config", "list"], {
+        env: { RAINDROP_OUTPUT: "json" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.output.value).toBe("json");
@@ -95,7 +69,9 @@ describe("runtime precedence", () => {
     const dir = await setupConfigDir({});
     try {
       // --json forces JSON even when config says human
-      const result = await run(["--json", "config", "list"], {}, dir);
+      const result = await runCli(["--json", "config", "list"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.output.value).toBe("json");
@@ -115,10 +91,9 @@ describe("runtime precedence", () => {
       }),
     });
     try {
-      const result = await run(
+      const result = await runCli(
         ["--json", "--profile", "work", "config", "list"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -137,11 +112,10 @@ describe("runtime precedence", () => {
       }),
     });
     try {
-      const result = await run(
-        ["config", "list"],
-        { RAINDROP_PROFILE: "work" },
-        dir,
-      );
+      const result = await runCli(["config", "list"], {
+        env: { RAINDROP_PROFILE: "work" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.default_collection.value).toBe(999);
@@ -155,11 +129,10 @@ describe("runtime precedence", () => {
       "config.toml": 'base_url = "https://custom.api/v1"',
     });
     try {
-      const result = await run(
-        ["config", "list"],
-        { RAINDROP_BASE_URL: "https://env.api/v1" },
-        dir,
-      );
+      const result = await runCli(["config", "list"], {
+        env: { RAINDROP_BASE_URL: "https://env.api/v1" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.base_url.value).toBe("https://env.api/v1");
@@ -174,12 +147,30 @@ describe("runtime precedence", () => {
       "config.toml": "max_retries = 5",
     });
     try {
-      const result = await run(["config", "list"], {}, dir);
+      const result = await runCli(["config", "list"], { configDir: dir });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.max_retries.value).toBe(5);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  it("rejects prototype-key profile names from --profile", async () => {
+    const result = await runCli(["--profile", "__proto__", "config", "list"], {
+      env: { RAINDROP_ACCESS_TOKEN: "tok" },
+    });
+    expect(result.code).toBe(2);
+    const err = JSON.parse(result.stderr);
+    expect(err.error.code).toBe("invalid_profile");
+  });
+
+  it("rejects prototype-key profile names from RAINDROP_PROFILE env", async () => {
+    const result = await runCli(["config", "list"], {
+      env: { RAINDROP_PROFILE: "constructor" },
+    });
+    expect(result.code).toBe(2);
+    const err = JSON.parse(result.stderr);
+    expect(err.error.code).toBe("invalid_profile");
   });
 });

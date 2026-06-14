@@ -3,40 +3,11 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-
-// We test the actual resolution functions through the CLI runner
-// by setting RAINDROP_CONFIG_DIR to a temp dir and checking env precedence.
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runCli } from "./helpers/run-cli.js";
 import { createMockServer } from "./helpers/mock-server.js";
 
-const exec = promisify(execFile);
-
 async function tmpConfigDir() {
-  const dir = await mkdtemp(join(tmpdir(), "rd-auth-test-"));
-  return dir;
-}
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-auth-run-")));
-  try {
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
+  return mkdtemp(join(tmpdir(), "rd-auth-test-"));
 }
 
 describe("auth precedence", () => {
@@ -65,10 +36,9 @@ describe("auth precedence", () => {
         body: { result: true, user: { _id: 1, email: "test@example.com" } },
       });
 
-      const result = await run(
+      const result = await runCli(
         ["--base-url", `${mock.url}`, "user", "get"],
-        { RAINDROP_ACCESS_TOKEN: "env-token" },
-        dir,
+        { env: { RAINDROP_ACCESS_TOKEN: "env-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       // Verify the env token was sent, not the stored one
@@ -103,10 +73,9 @@ describe("auth precedence", () => {
         body: { result: true, user: { _id: 1 } },
       });
 
-      const result = await run(
+      const result = await runCli(
         ["--base-url", `${mock.url}`, "user", "get"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
       expect(mock.requests[0]!.headers["authorization"]).toBe(
@@ -141,10 +110,9 @@ describe("auth precedence", () => {
         body: { result: true, user: { _id: 1 } },
       });
 
-      const result = await run(
+      const result = await runCli(
         ["--base-url", `${mock.url}`, "--profile", "work", "user", "get"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
       expect(mock.requests[0]!.headers["authorization"]).toBe(
@@ -159,11 +127,10 @@ describe("auth precedence", () => {
   it("auth status shows source=env when env token is present", async () => {
     const dir = await tmpConfigDir();
     try {
-      const result = await run(
-        ["auth", "status"],
-        { RAINDROP_ACCESS_TOKEN: "env-token" },
-        dir,
-      );
+      const result = await runCli(["auth", "status"], {
+        env: { RAINDROP_ACCESS_TOKEN: "env-token" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.source).toBe("env");
@@ -176,7 +143,7 @@ describe("auth precedence", () => {
   it("auth status returns error when no token is configured", async () => {
     const dir = await tmpConfigDir();
     try {
-      const result = await run(["auth", "status"], {}, dir);
+      const result = await runCli(["auth", "status"], { configDir: dir });
       expect(result.code).toBe(3);
       const err = JSON.parse(result.stderr);
       expect(err.error.code).toBe("auth_missing");
@@ -240,10 +207,12 @@ describe("auth precedence", () => {
         },
       });
 
-      const result = await run(
+      const result = await runCli(
         ["--base-url", `${mock.url}`, "user", "get"],
-        { RAINDROP_TOKEN_URL: `${mock.url}/oauth` },
-        dir,
+        {
+          env: { RAINDROP_TOKEN_URL: `${mock.url}/oauth` },
+          configDir: dir,
+        },
       );
 
       // Should have succeeded after refresh

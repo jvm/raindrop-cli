@@ -1,41 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { rm } from "node:fs/promises";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const exec = promisify(execFile);
-
-async function run(args: string[], env: Record<string, string> = {}) {
-  const dir = await mkdtemp(join(tmpdir(), "rd-human-"));
-  try {
-    return await exec("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { runCli } from "./helpers/run-cli.js";
 
 describe("human output", () => {
   it("config list --human shows key=value lines", async () => {
-    const result = await run(["--human", "config", "list"]);
+    const result = await runCli(["--human", "config", "list"]);
     expect(result.code).toBe(0);
     // In human mode, output should NOT be JSON
     expect(result.stdout).not.toMatch(/^\s*\{/);
   });
 
   it("config list --json shows JSON", async () => {
-    const result = await run(["--json", "config", "list"]);
+    const result = await runCli(["--json", "config", "list"]);
     expect(result.code).toBe(0);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.result).toBe(true);
@@ -43,23 +18,22 @@ describe("human output", () => {
   });
 
   it("auth status with --human shows human-readable text", async () => {
-    const result = await run(["--human", "auth", "status"], {
-      RAINDROP_ACCESS_TOKEN: "tok",
+    const result = await runCli(["--human", "auth", "status"], {
+      env: { RAINDROP_ACCESS_TOKEN: "tok" },
     });
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("authenticated");
   });
 
   it("NO_COLOR is respected", async () => {
-    const result = await run(["--human", "auth", "status"], {
-      RAINDROP_ACCESS_TOKEN: "tok",
-      NO_COLOR: "1",
+    const result = await runCli(["--human", "auth", "status"], {
+      env: { RAINDROP_ACCESS_TOKEN: "tok", NO_COLOR: "1" },
     });
     expect(result.code).toBe(0);
   });
 
   it("agent-context works without auth or network", async () => {
-    const result = await run(["agent-context"]);
+    const result = await runCli(["agent-context"]);
     expect(result.code).toBe(0);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.cli).toBe("raindrop");
@@ -75,7 +49,7 @@ describe("human output", () => {
   });
 
   it("agent-context --command shows specific command", async () => {
-    const result = await run(["agent-context", "--command", "bookmark.add"]);
+    const result = await runCli(["agent-context", "--command", "bookmark.add"]);
     expect(result.code).toBe(0);
     const parsed = JSON.parse(result.stdout);
     expect(parsed.commands["bookmark.add"]).toBeDefined();

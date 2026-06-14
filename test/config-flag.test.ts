@@ -2,32 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const runProcess = promisify(execFile);
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-  configDir?: string,
-) {
-  const dir = configDir ?? (await mkdtemp(join(tmpdir(), "rd-cfgflag-")));
-  try {
-    return await runProcess("pnpm", ["tsx", "src/cli.ts", ...args], {
-      env: { ...process.env, RAINDROP_CONFIG_DIR: dir, ...env },
-    }).then(
-      (r) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
-      (e) => ({
-        code: e.code ?? 1,
-        stdout: (e as any).stdout ?? "",
-        stderr: (e as any).stderr ?? "",
-      }),
-    );
-  } finally {
-    if (!configDir) await rm(dir, { recursive: true, force: true });
-  }
-}
+import { runCli } from "./helpers/run-cli.js";
 
 describe("--config flag", () => {
   it("config path reflects --config override", async () => {
@@ -35,10 +10,9 @@ describe("--config flag", () => {
     const customCfg = join(dir, "custom-config.toml");
     try {
       await writeFile(customCfg, 'output = "human"\n', "utf8");
-      const result = await run(
+      const result = await runCli(
         ["--json", "--config", customCfg, "config", "path"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
@@ -53,10 +27,9 @@ describe("--config flag", () => {
     const customCfg = join(dir, "alt.toml");
     try {
       await writeFile(customCfg, 'output = "human"\nmax_retries = 7\n', "utf8");
-      const result = await run(
+      const result = await runCli(
         ["--config", customCfg, "--json", "config", "list"],
-        {},
-        dir,
+        { configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
