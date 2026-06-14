@@ -9,10 +9,9 @@ describe("credentials permissions", () => {
   it("stores credentials with 0600 permissions", async () => {
     const dir = await mkdtemp(join(tmpdir(), "rd-cred-"));
     try {
-      const result = await runCli(
-        ["auth", "login", "--token", "my-secret-token"],
-        { configDir: dir },
-      );
+      const result = await runCli(["auth", "login", "--token", "my-secret-token"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
 
       // Verify file permissions
@@ -23,9 +22,7 @@ describe("credentials permissions", () => {
       }
 
       // Verify credentials are stored
-      const content = JSON.parse(
-        await readFile(join(dir, "credentials.json"), "utf8"),
-      );
+      const content = JSON.parse(await readFile(join(dir, "credentials.json"), "utf8"));
       expect(content.profiles.default.access_token).toBe("my-secret-token");
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -63,17 +60,14 @@ describe("credentials permissions", () => {
   it("stores token in named profile", async () => {
     const dir = await mkdtemp(join(tmpdir(), "rd-cred-"));
     try {
-      const result = await runCli(
-        ["--profile", "work", "auth", "login", "--token", "work-token"],
-        { configDir: dir },
-      );
+      const result = await runCli(["--profile", "work", "auth", "login", "--token", "work-token"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.profile).toBe("work");
 
-      const content = JSON.parse(
-        await readFile(join(dir, "credentials.json"), "utf8"),
-      );
+      const content = JSON.parse(await readFile(join(dir, "credentials.json"), "utf8"));
       expect(content.profiles.work.access_token).toBe("work-token");
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -93,9 +87,7 @@ describe("credentials permissions", () => {
       });
       expect(result.code).toBe(0);
 
-      const content = JSON.parse(
-        await readFile(join(dir, "credentials.json"), "utf8"),
-      );
+      const content = JSON.parse(await readFile(join(dir, "credentials.json"), "utf8"));
       expect(content.profiles.default).toBeUndefined();
     } finally {
       await rm(dir, { recursive: true, force: true });

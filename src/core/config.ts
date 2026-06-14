@@ -58,10 +58,7 @@ export function activeConfigPath(): string {
   return configPathOverride ?? configPath();
 }
 
-export async function writeConfig(
-  config: Config,
-  path?: string,
-): Promise<void> {
+export async function writeConfig(config: Config, path?: string): Promise<void> {
   runtimeCache = undefined;
   const resolved = path ?? activeConfigPath();
   await mkdir(dirname(resolved), { recursive: true });
@@ -116,8 +113,7 @@ function extractIcaclsPrincipal(line: string): string | null {
   while (end < line.length) {
     const c = line.charCodeAt(end);
     if (isAsciiWhitespace(c)) break;
-    if (c === 0x3a /* ":" */ && line.charCodeAt(end + 1) === 0x28 /* "(" */)
-      break;
+    if (c === 0x3a /* ":" */ && line.charCodeAt(end + 1) === 0x28 /* "(" */) break;
     end++;
   }
   // The original regex's optional group `(?:\S.*?\s)?` matches only
@@ -176,24 +172,17 @@ async function assertWindowsOwnerOnly(path: string): Promise<void> {
   }
   if (result.status !== 0 || !result.stdout) return;
   const stdout = String(result.stdout);
-  const lines = stdout
-    .split(/\r?\n/)
-    .filter((line) => line.indexOf(":(") !== -1);
+  const lines = stdout.split(/\r?\n/).filter((line) => line.indexOf(":(") !== -1);
   const principals = lines
     .map(extractIcaclsPrincipal)
-    .filter(
-      (principal): principal is string =>
-        Boolean(principal) && principal !== path,
-    );
+    .filter((principal): principal is string => Boolean(principal) && principal !== path);
   const trusted = new Set([
     owner.toLowerCase(),
     "nt authority\\system",
     "builtin\\administrators",
     "administrators",
   ]);
-  const foreign = principals.filter(
-    (principal) => !trusted.has(principal.toLowerCase()),
-  );
+  const foreign = principals.filter((principal) => !trusted.has(principal.toLowerCase()));
   if (foreign.length > 0) {
     throw new CLIError({
       code: "credentials_insecure_permissions",
@@ -204,9 +193,7 @@ async function assertWindowsOwnerOnly(path: string): Promise<void> {
   }
 }
 
-export async function readCredentials(
-  path = credentialsPath(),
-): Promise<Credentials> {
+export async function readCredentials(path = credentialsPath()): Promise<Credentials> {
   await assertPrivateFile(path);
   try {
     return JSON.parse(await readFile(path, "utf8")) as Credentials;
@@ -233,9 +220,7 @@ export async function writeCredentials(
   else await chmod(path, 0o600);
 }
 
-export async function deleteCredentials(
-  path = credentialsPath(),
-): Promise<void> {
+export async function deleteCredentials(path = credentialsPath()): Promise<void> {
   await rm(path, { force: true });
 }
 
@@ -252,10 +237,7 @@ export async function readProfiles(path = profilesPath()): Promise<Profiles> {
   }
 }
 
-export async function writeProfiles(
-  profiles: Profiles,
-  path = profilesPath(),
-): Promise<void> {
+export async function writeProfiles(profiles: Profiles, path = profilesPath()): Promise<void> {
   runtimeCache = undefined;
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(profiles, null, 2)}\n`, "utf8");
@@ -285,9 +267,7 @@ export type RuntimeContext = Required<
   >
 > & { profile: string };
 
-export async function resolveRuntime(
-  flags: Record<string, unknown> = {},
-): Promise<RuntimeContext> {
+export async function resolveRuntime(flags: Record<string, unknown> = {}): Promise<RuntimeContext> {
   const key = runtimeCacheKey(flags);
   if (runtimeCache?.key === key) return runtimeCache.value;
   const value = buildRuntime(flags);
@@ -295,9 +275,7 @@ export async function resolveRuntime(
   return value;
 }
 
-async function buildRuntime(
-  flags: Record<string, unknown>,
-): Promise<RuntimeContext> {
+async function buildRuntime(flags: Record<string, unknown>): Promise<RuntimeContext> {
   const cfg = await readConfig();
   const profile = await activeProfileName(
     typeof flags.profile === "string" ? flags.profile : undefined,
@@ -346,12 +324,7 @@ async function buildRuntime(
         "https://raindrop.io/oauth/access_token",
       ),
     ),
-    max_retries: firstNumber(
-      process.env.RAINDROP_MAX_RETRIES,
-      p.max_retries,
-      cfg.max_retries,
-      3,
-    ),
+    max_retries: firstNumber(process.env.RAINDROP_MAX_RETRIES, p.max_retries, cfg.max_retries, 3),
   };
 }
 
@@ -362,18 +335,14 @@ function outputFrom(
 ): "json" | "human" {
   if (flags.human) return "human";
   if (flags.json) return "json";
-  return firstDefined(
-    process.env.RAINDROP_OUTPUT,
-    profile.output,
-    file.output,
-    "json",
-  ) as "json" | "human";
+  return firstDefined(process.env.RAINDROP_OUTPUT, profile.output, file.output, "json") as
+    | "json"
+    | "human";
 }
 
 function firstDefined<T>(...values: Array<T | undefined | null | "">): T {
   for (const value of values) {
-    if (value !== undefined && value !== null && value !== "")
-      return value as T;
+    if (value !== undefined && value !== null && value !== "") return value as T;
   }
   return undefined as T;
 }

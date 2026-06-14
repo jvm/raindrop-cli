@@ -2,10 +2,7 @@ export interface CommandSpec {
   name: string;
   summary: string;
   examples: string[];
-  flags?: Record<
-    string,
-    { description: string; type?: string; enum?: string[] }
-  >;
+  flags?: Record<string, { description: string; type?: string; enum?: string[] }>;
 }
 
 /**

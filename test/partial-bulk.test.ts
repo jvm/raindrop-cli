@@ -91,14 +91,7 @@ describe("partial bulk exit code", () => {
         items: [{ link: "https://a.example" }, { link: "https://b.example" }],
       };
       const result = await runCli(
-        [
-          "--base-url",
-          mock.url,
-          "bookmark",
-          "bulk-create",
-          "-d",
-          JSON.stringify(body),
-        ],
+        ["--base-url", mock.url, "bookmark", "bulk-create", "-d", JSON.stringify(body)],
         { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(6);
@@ -123,16 +116,7 @@ describe("partial bulk exit code", () => {
         body: { result: true, modified: 1 },
       });
       const result = await runCli(
-        [
-          "--base-url",
-          mock.url,
-          "collection",
-          "delete-many",
-          "1",
-          "2",
-          "3",
-          "--force",
-        ],
+        ["--base-url", mock.url, "collection", "delete-many", "1", "2", "3", "--force"],
         { env: { RAINDROP_ACCESS_TOKEN: "test" }, configDir: dir },
       );
       expect(result.code).toBe(6);

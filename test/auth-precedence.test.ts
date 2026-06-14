@@ -36,15 +36,13 @@ describe("auth precedence", () => {
         body: { result: true, user: { _id: 1, email: "test@example.com" } },
       });
 
-      const result = await runCli(
-        ["--base-url", `${mock.url}`, "user", "get"],
-        { env: { RAINDROP_ACCESS_TOKEN: "env-token" }, configDir: dir },
-      );
+      const result = await runCli(["--base-url", `${mock.url}`, "user", "get"], {
+        env: { RAINDROP_ACCESS_TOKEN: "env-token" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       // Verify the env token was sent, not the stored one
-      expect(mock.requests[0]!.headers["authorization"]).toBe(
-        "Bearer env-token",
-      );
+      expect(mock.requests[0]!.headers["authorization"]).toBe("Bearer env-token");
     } finally {
       await mock.close();
       await rm(dir, { recursive: true, force: true });
@@ -73,14 +71,9 @@ describe("auth precedence", () => {
         body: { result: true, user: { _id: 1 } },
       });
 
-      const result = await runCli(
-        ["--base-url", `${mock.url}`, "user", "get"],
-        { configDir: dir },
-      );
+      const result = await runCli(["--base-url", `${mock.url}`, "user", "get"], { configDir: dir });
       expect(result.code).toBe(0);
-      expect(mock.requests[0]!.headers["authorization"]).toBe(
-        "Bearer stored-token",
-      );
+      expect(mock.requests[0]!.headers["authorization"]).toBe("Bearer stored-token");
     } finally {
       await mock.close();
       await rm(dir, { recursive: true, force: true });
@@ -115,9 +108,7 @@ describe("auth precedence", () => {
         { configDir: dir },
       );
       expect(result.code).toBe(0);
-      expect(mock.requests[0]!.headers["authorization"]).toBe(
-        "Bearer work-token",
-      );
+      expect(mock.requests[0]!.headers["authorization"]).toBe("Bearer work-token");
     } finally {
       await mock.close();
       await rm(dir, { recursive: true, force: true });
@@ -207,13 +198,10 @@ describe("auth precedence", () => {
         },
       });
 
-      const result = await runCli(
-        ["--base-url", `${mock.url}`, "user", "get"],
-        {
-          env: { RAINDROP_TOKEN_URL: `${mock.url}/oauth` },
-          configDir: dir,
-        },
-      );
+      const result = await runCli(["--base-url", `${mock.url}`, "user", "get"], {
+        env: { RAINDROP_TOKEN_URL: `${mock.url}/oauth` },
+        configDir: dir,
+      });
 
       // Should have succeeded after refresh
       expect(result.code).toBe(0);

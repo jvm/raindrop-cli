@@ -3,10 +3,11 @@ packages:
 
 allowBuilds:
   esbuild: true
+  lefthook: true
 
 strictDepBuilds: false
 
-# Force patched esbuild across all transitive users (tsup, vitest, tsx)
+# Force patched esbuild across all transitive users (vitest, tsx)
 # until each upstream publishes a new release. Removes the two open
 # esbuild advisories (Deno RCE + Windows dev-server file read).
 overrides:

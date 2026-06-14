@@ -1,9 +1,4 @@
-import {
-  createServer,
-  type Server,
-  type IncomingMessage,
-  type ServerResponse,
-} from "node:http";
+import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
 
 export type MockRoute = {
   method: string;
@@ -70,11 +65,7 @@ export async function createMockServer(): Promise<MockServer> {
           ...route.headers,
         };
         res.writeHead(status, resHeaders);
-        res.end(
-          route.body !== undefined
-            ? JSON.stringify(route.body)
-            : '{"result":true}',
-        );
+        res.end(route.body !== undefined ? JSON.stringify(route.body) : '{"result":true}');
       } else {
         res.writeHead(404, { "Content-Type": "application/json" });
         res.end('{"result":false,"error":"mock route not found"}');
@@ -97,9 +88,7 @@ export async function createMockServer(): Promise<MockServer> {
           routes.push(route);
         },
         close() {
-          return new Promise<void>((res, rej) =>
-            server.close((err) => (err ? rej(err) : res())),
-          );
+          return new Promise<void>((res, rej) => server.close((err) => (err ? rej(err) : res())));
         },
       });
     });

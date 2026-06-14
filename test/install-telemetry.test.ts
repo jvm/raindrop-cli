@@ -5,15 +5,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { reportInstallTelemetry } from "../src/core/telemetry.js";
 import { createMockServer, type MockServer } from "./helpers/mock-server.js";
 
-const ENV_KEYS = [
-  "XDG_STATE_HOME",
-  "RAINDROP_TELEMETRY",
-  "CI",
-  "GITHUB_ACTIONS",
-] as const;
-const ORIGINAL_ENV = Object.fromEntries(
-  ENV_KEYS.map((key) => [key, process.env[key]]),
-);
+const ENV_KEYS = ["XDG_STATE_HOME", "RAINDROP_TELEMETRY", "CI", "GITHUB_ACTIONS"] as const;
+const ORIGINAL_ENV = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 let server: MockServer | undefined;
 let stateRoot: string | undefined;
 
@@ -48,9 +41,7 @@ describe("install telemetry", () => {
 
     expect(mock.requests).toHaveLength(1);
     expect(mock.requests[0]?.method).toBe("GET");
-    expect(mock.requests[0]?.url).toBe(
-      "/api/report-install?tool=raindrop-cli&version=1.2.3",
-    );
+    expect(mock.requests[0]?.url).toBe("/api/report-install?tool=raindrop-cli&version=1.2.3");
     expect(mock.requests[0]?.headers["user-agent"]).toMatch(
       /^raindrop-cli\/1\.2\.3 \([^)]+; node\/v\d+\.\d+\.\d+; [^)]+\)$/,
     );

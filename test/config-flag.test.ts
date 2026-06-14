@@ -10,10 +10,9 @@ describe("--config flag", () => {
     const customCfg = join(dir, "custom-config.toml");
     try {
       await writeFile(customCfg, 'output = "human"\n', "utf8");
-      const result = await runCli(
-        ["--json", "--config", customCfg, "config", "path"],
-        { configDir: dir },
-      );
+      const result = await runCli(["--json", "--config", customCfg, "config", "path"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.path).toBe(customCfg);
@@ -27,10 +26,9 @@ describe("--config flag", () => {
     const customCfg = join(dir, "alt.toml");
     try {
       await writeFile(customCfg, 'output = "human"\nmax_retries = 7\n', "utf8");
-      const result = await runCli(
-        ["--config", customCfg, "--json", "config", "list"],
-        { configDir: dir },
-      );
+      const result = await runCli(["--config", customCfg, "--json", "config", "list"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.max_retries.value).toBe(7);

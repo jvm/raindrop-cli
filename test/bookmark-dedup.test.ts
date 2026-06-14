@@ -64,22 +64,14 @@ describe("bookmark add dedup", () => {
       });
 
       const result = await runCli(
-        [
-          "--base-url",
-          `${mock.url}`,
-          "bookmark",
-          "add",
-          "https://new.example.com",
-        ],
+        ["--base-url", `${mock.url}`, "bookmark", "add", "https://new.example.com"],
         { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.result).toBe(true);
       // Should have called create
-      const createReq = mock.requests.find(
-        (r) => r.url === "/raindrop" && r.method === "POST",
-      );
+      const createReq = mock.requests.find((r) => r.url === "/raindrop" && r.method === "POST");
       expect(createReq).toBeDefined();
     } finally {
       await mock.close();
@@ -115,9 +107,7 @@ describe("bookmark add dedup", () => {
       );
       expect(result.code).toBe(0);
       // Should NOT have called import/url/exists
-      const existsReq = mock.requests.find((r) =>
-        r.url?.includes("/import/url/exists"),
-      );
+      const existsReq = mock.requests.find((r) => r.url?.includes("/import/url/exists"));
       expect(existsReq).toBeUndefined();
     } finally {
       await mock.close();
@@ -153,9 +143,7 @@ describe("bookmark add dedup", () => {
       expect(parsed.dry_run).toBe(true);
       expect(parsed.request).toBeDefined();
       // No create call
-      const createReq = mock.requests.find(
-        (r) => r.url === "/raindrop" && r.method === "POST",
-      );
+      const createReq = mock.requests.find((r) => r.url === "/raindrop" && r.method === "POST");
       expect(createReq).toBeUndefined();
     } finally {
       await mock.close();
@@ -193,9 +181,7 @@ describe("bookmark add dedup", () => {
         { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
 
-      const createReq = mock.requests.find(
-        (r) => r.url === "/raindrop" && r.method === "POST",
-      );
+      const createReq = mock.requests.find((r) => r.url === "/raindrop" && r.method === "POST");
       expect(createReq).toBeDefined();
       const body = createReq!.body as any;
       expect(body.link).toBe("https://tagged.example.com");

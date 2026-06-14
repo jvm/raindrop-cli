@@ -28,10 +28,10 @@ describe("contract fixture tests", () => {
         },
       });
 
-      const result = await runCli(
-        ["--base-url", `${mock.url}`, "user", "get"],
-        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
-      );
+      const result = await runCli(["--base-url", `${mock.url}`, "user", "get"], {
+        env: { RAINDROP_ACCESS_TOKEN: "tok" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.user.customField).toBe("should-be-preserved");
@@ -102,10 +102,10 @@ describe("contract fixture tests", () => {
         },
       });
 
-      const result = await runCli(
-        ["--base-url", `${mock.url}`, "collection", "get", "123"],
-        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
-      );
+      const result = await runCli(["--base-url", `${mock.url}`, "collection", "get", "123"], {
+        env: { RAINDROP_ACCESS_TOKEN: "tok" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.item.color).toBe("#ff0000");

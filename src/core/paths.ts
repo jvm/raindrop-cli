@@ -9,10 +9,7 @@ export function configDir(): string {
 }
 
 export function stateDir(): string {
-  return join(
-    process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"),
-    "raindrop",
-  );
+  return join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "raindrop");
 }
 
 export function configPath(): string {

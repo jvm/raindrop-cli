@@ -7,9 +7,7 @@ describe("doctor", () => {
     expect(result.code).not.toBe(2); // not a usage error
     const parsed = JSON.parse(result.stdout);
     expect(parsed.checks).toBeDefined();
-    const configCheck = parsed.checks.find(
-      (c: any) => c.name === "config_parseable",
-    );
+    const configCheck = parsed.checks.find((c: any) => c.name === "config_parseable");
     expect(configCheck).toBeDefined();
     expect(configCheck.ok).toBe(true);
   });
@@ -36,9 +34,7 @@ describe("doctor", () => {
   it("checks state dir writable", async () => {
     const result = await runCli(["doctor"]);
     const parsed = JSON.parse(result.stdout);
-    const stateCheck = parsed.checks.find(
-      (c: any) => c.name === "state_dir_writable",
-    );
+    const stateCheck = parsed.checks.find((c: any) => c.name === "state_dir_writable");
     expect(stateCheck).toBeDefined();
     expect(stateCheck.ok).toBe(true);
   });
@@ -46,9 +42,7 @@ describe("doctor", () => {
   it("checks api connectivity", async () => {
     const result = await runCli(["doctor"]);
     const parsed = JSON.parse(result.stdout);
-    const connCheck = parsed.checks.find(
-      (c: any) => c.name === "api_connectivity",
-    );
+    const connCheck = parsed.checks.find((c: any) => c.name === "api_connectivity");
     expect(connCheck).toBeDefined();
   });
 });

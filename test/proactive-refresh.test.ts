@@ -55,9 +55,7 @@ describe("proactive token refresh near expiry", () => {
       expect(userRequest).toBeDefined();
       expect(userRequest!.headers["authorization"]).toBe("Bearer fresh-token");
       // The refresh endpoint should have been called
-      const refreshRequest = mock.requests.find(
-        (r) => r.url === "/oauth/access_token",
-      );
+      const refreshRequest = mock.requests.find((r) => r.url === "/oauth/access_token");
       expect(refreshRequest).toBeDefined();
     } finally {
       await mock.close();
@@ -100,9 +98,7 @@ describe("proactive token refresh near expiry", () => {
       expect(result.code).toBe(0);
       const userRequest = mock.requests.find((r) => r.url === "/user");
       expect(userRequest!.headers["authorization"]).toBe("Bearer fresh-enough");
-      const refreshRequest = mock.requests.find(
-        (r) => r.url === "/oauth/access_token",
-      );
+      const refreshRequest = mock.requests.find((r) => r.url === "/oauth/access_token");
       expect(refreshRequest).toBeUndefined();
     } finally {
       await mock.close();
@@ -147,9 +143,7 @@ describe("proactive token refresh near expiry", () => {
       expect(result.code).toBe(0);
       const userRequest = mock.requests.find((r) => r.url === "/user");
       expect(userRequest!.headers["authorization"]).toBe("Bearer env-token");
-      const refreshRequest = mock.requests.find(
-        (r) => r.url === "/oauth/access_token",
-      );
+      const refreshRequest = mock.requests.find((r) => r.url === "/oauth/access_token");
       expect(refreshRequest).toBeUndefined();
     } finally {
       await mock.close();

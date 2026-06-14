@@ -193,8 +193,7 @@ paths:
           in: query
           schema:
             type: string
-            enum:
-              [-created, created, score, -sort, title, -title, domain, -domain]
+            enum: [-created, created, score, -sort, title, -title, domain, -domain]
         - $ref: "#/components/parameters/search"
       responses:
         "200":

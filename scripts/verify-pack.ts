@@ -19,9 +19,7 @@ async function main() {
     .split(/\n/)
     .filter((file) => /(^|\/)(PLAN|TODO)\.md$/i.test(file));
   if (forbiddenFiles.length) {
-    throw new Error(
-      `Forbidden planning files included in package: ${forbiddenFiles.join(", ")}`,
-    );
+    throw new Error(`Forbidden planning files included in package: ${forbiddenFiles.join(", ")}`);
   }
 
   const dir = await mkdtemp(join(tmpdir(), "raindrop-cli-pack-"));

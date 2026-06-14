@@ -16,7 +16,7 @@ Agent-friendly and script-friendly CLI for [Raindrop.io](https://raindrop.io). T
 
 ## Installation
 
-Requires Node.js `>=20.11`.
+Requires Node.js `>=24`.
 
 ```bash
 npm install -g @mocito/raindrop-cli
@@ -149,19 +149,18 @@ This repository uses pnpm.
 
 ```bash
 pnpm install
+pnpm validate
 pnpm build
 pnpm test
+pnpm test:watch
 pnpm lint
 pnpm format
+pnpm format:check
 pnpm typecheck
 pnpm verify-pack
 ```
 
-Generated command docs and specs come from `spec/commands.yaml`:
-
-```bash
-pnpm codegen
-```
+Generated command docs and specs come from `spec/commands.yaml`. Run `pnpm codegen` after editing that file.
 
 Tests must use mocks or local helpers and must not require live Raindrop credentials.
 

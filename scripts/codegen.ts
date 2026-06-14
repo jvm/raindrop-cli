@@ -10,10 +10,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { format } from "prettier";
-import {
-  type CommandSpec,
-  parseCommandsYaml,
-} from "./lib/parse-commands-yaml.js";
+import { type CommandSpec, parseCommandsYaml } from "./lib/parse-commands-yaml.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");

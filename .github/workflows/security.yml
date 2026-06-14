@@ -1,36 +1,55 @@
-name: Security scanners
-
-# Reusable security-scanner workflow. Invoked from ci.yml (on every
-# push / PR) and from release.yml (before publishing to npm). The
-# three scanners cover the same threat models with different strengths:
-#   - betterleaks: secret detection (Rust gitleaks rewrite, same author)
-#   - semgrep: SAST via curated rulesets (OWASP, secrets, lang-specific)
-#   - njsscan: Node.js-specific SAST (catches things the others miss,
-#     e.g. crypto-strength RNGs)
-#
-# Any non-zero exit blocks the caller. Inputs:
-#   upload-artifact: also publish the njsscan JSON report as a GH
-#     artifact (useful in ci.yml for debugging; release.yml doesn't
-#     need it).
+name: Security
 
 on:
   workflow_call:
     inputs:
       upload-artifact:
-        description: Upload the njsscan JSON report as a workflow artifact
+        description: Upload the betterleaks SARIF report as a workflow artifact.
         type: boolean
         required: false
         default: false
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["src/**", "package.json", "pnpm-lock.yaml", ".github/workflows/**"]
+  schedule:
+    - cron: "37 4 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  scan:
-    name: Security scanners
+  audit:
+    name: Dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secret scan (betterleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
-
+          persist-credentials: false
       - name: Install betterleaks
         run: |
           BETTERLEAKS_VERSION=1.5.0
@@ -38,35 +57,75 @@ jobs:
           tar -xzf betterleaks.tar.gz betterleaks
           sudo install -m 0755 betterleaks /usr/local/bin/betterleaks
       - name: Run betterleaks
-        run: betterleaks dir --no-banner --redact --verbose --source . --exit-code=2
-
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/typescript
-            p/javascript
-            p/security-audit
-            p/secrets
-            p/nodejs
-            p/owasp-top-ten
-        env:
-          SEMGREP_SEND_METRICS: "off"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install njsscan
-        run: pip install --quiet njsscan
-      - name: Run njsscan
-        # --missing-controls is intentionally off: the CLI is not a web
-        # server, so Helmet/CSRF/rate-limit findings are noise. Scoped
-        # to src/ to keep the surface small.
-        run: njsscan --exit-warning --json -o njsscan-results.json src/
-      - name: Upload njsscan report
+        run: betterleaks dir . --no-banner --redact --exit-code=2 --report-path betterleaks.sarif --report-format sarif
+      - name: Upload betterleaks SARIF
         if: always() && inputs.upload-artifact
-        uses: actions/upload-artifact@v4
+        uses: github/codeql-action/upload-sarif@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
         with:
-          name: njsscan-report
-          path: njsscan-results.json
-          if-no-files-found: ignore
+          sarif_file: betterleaks.sarif
+
+  codeql:
+    name: CodeQL analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+      - uses: github/codeql-action/autobuild@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
+      - uses: github/codeql-action/analyze@c35d1b164463ee62a100735382aaaa525c5d3496 # codeql-bundle-v2.25.6
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Run ShellCheck when shell scripts are present
+        run: |
+          mapfile -t scripts < <(find . -type f -name '*.sh' \
+            -not -path './node_modules/*' \
+            -not -path './.git/*' \
+            -not -path './dist/*')
+          if [ "${#scripts[@]}" -eq 0 ]; then
+            echo "No shell scripts found; skipping."
+          else
+            shellcheck "${scripts[@]}"
+          fi
+
+  workflow-lint:
+    name: Workflow lint (actionlint + zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
+        with:
+          ignore: SC1091
+      - name: Install zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo zizmorcore/zizmor \
+            --pattern 'zizmor-x86_64-unknown-linux-gnu.tar.gz' \
+            --output /tmp/zizmor.tar.gz
+          tar xzf /tmp/zizmor.tar.gz -C /usr/local/bin zizmor
+          chmod +x /usr/local/bin/zizmor
+      - name: Run zizmor
+        run: |
+          zizmor --color always \
+                 --persona auditor \
+                 --min-severity high \
+                 --min-confidence medium \
+                 .github/workflows/

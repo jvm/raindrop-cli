@@ -6,30 +6,22 @@ describe("rate-limit retry", () => {
     let callCount = 0;
     const originalFetch = globalThis.fetch;
 
-    const mockFetch = vi.fn(
-      async (_url: string | URL | Request, _init?: RequestInit) => {
-        callCount++;
-        if (callCount === 1) {
-          return new Response(
-            JSON.stringify({ result: false, errorMessage: "Rate limited" }),
-            {
-              status: 429,
-              headers: {
-                "x-ratelimit-reset": "0",
-                "content-type": "application/json",
-              },
-            },
-          );
-        }
-        return new Response(
-          JSON.stringify({ result: true, user: { _id: 1 } }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
+    const mockFetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => {
+      callCount++;
+      if (callCount === 1) {
+        return new Response(JSON.stringify({ result: false, errorMessage: "Rate limited" }), {
+          status: 429,
+          headers: {
+            "x-ratelimit-reset": "0",
+            "content-type": "application/json",
           },
-        );
-      },
-    );
+        });
+      }
+      return new Response(JSON.stringify({ result: true, user: { _id: 1 } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
 
     globalThis.fetch = mockFetch as any;
 
@@ -60,16 +52,13 @@ describe("rate-limit retry", () => {
     const originalFetch = globalThis.fetch;
 
     const mockFetch = vi.fn(async () => {
-      return new Response(
-        JSON.stringify({ result: false, errorMessage: "Rate limited" }),
-        {
-          status: 429,
-          headers: {
-            "x-ratelimit-reset": "0",
-            "content-type": "application/json",
-          },
+      return new Response(JSON.stringify({ result: false, errorMessage: "Rate limited" }), {
+        status: 429,
+        headers: {
+          "x-ratelimit-reset": "0",
+          "content-type": "application/json",
         },
-      );
+      });
     });
 
     globalThis.fetch = mockFetch as any;

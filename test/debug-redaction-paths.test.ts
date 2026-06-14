@@ -16,13 +16,10 @@ describe("debug redaction across command paths", () => {
         status: 200,
         body: { result: true, user: { _id: 1, email: "x@y" } },
       });
-      const result = await runCli(
-        ["--base-url", mock.url, "--debug", "user", "get"],
-        {
-          env: { RAINDROP_ACCESS_TOKEN: "super-secret-token" },
-          configDir: dir,
-        },
-      );
+      const result = await runCli(["--base-url", mock.url, "--debug", "user", "get"], {
+        env: { RAINDROP_ACCESS_TOKEN: "super-secret-token" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       expect(result.stderr).not.toContain("super-secret-token");
       expect(result.stderr.toLowerCase()).not.toContain("authorization");

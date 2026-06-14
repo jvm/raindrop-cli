@@ -23,10 +23,10 @@ describe("backup generate jobs ledger resume", () => {
         status: 200,
         body: { result: true },
       });
-      const result = await runCli(
-        ["--base-url", mock.url, "backup", "generate"],
-        { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
-      );
+      const result = await runCli(["--base-url", mock.url, "backup", "generate"], {
+        env: { RAINDROP_ACCESS_TOKEN: "tok" },
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.job_id).toMatch(/^backup-\d+$/);

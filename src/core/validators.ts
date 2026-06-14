@@ -65,12 +65,7 @@ export function validateLimit(value: unknown): number {
   return n;
 }
 
-export function validateEnum(
-  value: string,
-  valid: string[],
-  label: string,
-  usage: string,
-): string {
+export function validateEnum(value: string, valid: string[], label: string, usage: string): string {
   if (!valid.includes(value)) {
     throw new CLIError({
       code: `invalid_${label}`,
@@ -97,8 +92,7 @@ export function safeProfileName(name: string): string {
   if (!/^[A-Za-z0-9._-]+$/.test(name)) {
     throw new CLIError({
       code: "invalid_profile",
-      message:
-        "Profile names must use only letters, numbers, dot, underscore, and dash",
+      message: "Profile names must use only letters, numbers, dot, underscore, and dash",
       exitCode: ExitCode.Usage,
     });
   }

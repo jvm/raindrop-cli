@@ -3,11 +3,7 @@ import { randomInt } from "node:crypto";
 import { dirname, basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import {
-  maybeProactiveRefresh,
-  refreshStoredToken,
-  resolveToken,
-} from "./auth.js";
+import { maybeProactiveRefresh, refreshStoredToken, resolveToken } from "./auth.js";
 import { resolveRuntime } from "./config.js";
 import { CLIError, ExitCode, redact } from "./errors.js";
 
@@ -62,10 +58,7 @@ export class ApiClient {
       const response = await fetch(url, init);
       lastResponse = response;
       if (response.status === 401 && !options.skipAuth) {
-        const refreshed = await refreshStoredToken(
-          runtime.profile,
-          runtime.token_url,
-        );
+        const refreshed = await refreshStoredToken(runtime.profile, runtime.token_url);
         if (refreshed) {
           headers.set("Authorization", `Bearer ${refreshed}`);
           return await this.handleResponse(
@@ -74,10 +67,7 @@ export class ApiClient {
           );
         }
       }
-      if (
-        !(response.status === 429 || response.status >= 500) ||
-        attempt === runtime.max_retries
-      ) {
+      if (!(response.status === 429 || response.status >= 500) || attempt === runtime.max_retries) {
         return await this.handleResponse(response, options);
       }
       await delay(backoffMs(attempt, response));
@@ -88,35 +78,24 @@ export class ApiClient {
   private makeUrl(baseUrl: string, options: ApiOptions): URL {
     const url = options.absoluteUrl
       ? new URL(options.path)
-      : new URL(
-          `${baseUrl.replace(/\/$/, "")}/${options.path.replace(/^\//, "")}`,
-        );
+      : new URL(`${baseUrl.replace(/\/$/, "")}/${options.path.replace(/^\//, "")}`);
     for (const [key, value] of Object.entries(options.query ?? {})) {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
     return url;
   }
 
-  private async handleResponse(
-    response: Response,
-    options: ApiOptions,
-  ): Promise<unknown> {
-    if (!response.ok)
-      throw await errorFromResponse(response, options.operationName);
+  private async handleResponse(response: Response, options: ApiOptions): Promise<unknown> {
+    if (!response.ok) throw await errorFromResponse(response, options.operationName);
     if (options.outputFile)
-      return await writeDownload(
-        response,
-        options.outputFile,
-        Boolean(options.force),
-      );
+      return await writeDownload(response, options.outputFile, Boolean(options.force));
     if (options.raw) return await response.text();
     const ct = response.headers.get("content-type") ?? "";
     if (ct.includes("json")) return await response.json();
     const text = await response.text();
     if (!text) return { result: true };
     const firstChar = text.trimStart()[0];
-    if (firstChar === "{" || firstChar === "[")
-      return JSON.parse(text) as unknown;
+    if (firstChar === "{" || firstChar === "[") return JSON.parse(text) as unknown;
     return { result: true, body: text };
   }
 }
@@ -151,9 +130,7 @@ async function errorFromResponse(
         ? ExitCode.RateLimited
         : ExitCode.Failure;
   const requestId =
-    response.headers.get("x-request-id") ??
-    response.headers.get("request-id") ??
-    undefined;
+    response.headers.get("x-request-id") ?? response.headers.get("request-id") ?? undefined;
   const rateLimit = rateLimitFromHeaders(response.headers);
   return new CLIError({
     code,
@@ -166,15 +143,10 @@ async function errorFromResponse(
   });
 }
 
-function rateLimitFromHeaders(
-  headers: Headers,
-): Record<string, string | number> | undefined {
-  const limit =
-    headers.get("x-ratelimit-limit") ?? headers.get("ratelimit-limit");
-  const remaining =
-    headers.get("x-ratelimit-remaining") ?? headers.get("ratelimit-remaining");
-  const reset =
-    headers.get("x-ratelimit-reset") ?? headers.get("ratelimit-reset");
+function rateLimitFromHeaders(headers: Headers): Record<string, string | number> | undefined {
+  const limit = headers.get("x-ratelimit-limit") ?? headers.get("ratelimit-limit");
+  const remaining = headers.get("x-ratelimit-remaining") ?? headers.get("ratelimit-remaining");
+  const reset = headers.get("x-ratelimit-reset") ?? headers.get("ratelimit-reset");
   const out: Record<string, string | number> = {};
   if (limit) out.limit = Number(limit) || limit;
   if (remaining) out.remaining = Number(remaining) || remaining;
@@ -215,9 +187,7 @@ async function writeDownload(
         message: "Response had no body",
       });
     await pipeline(
-      Readable.fromWeb(
-        response.body as unknown as import("node:stream/web").ReadableStream,
-      ),
+      Readable.fromWeb(response.body as unknown as import("node:stream/web").ReadableStream),
       createWriteStream(tmp, { flags: "wx" }),
     );
     await rename(tmp, outputPath);
@@ -237,8 +207,7 @@ async function writeDownload(
 
 function backoffMs(attempt: number, response: Response): number {
   const reset =
-    response.headers.get("x-ratelimit-reset") ??
-    response.headers.get("ratelimit-reset");
+    response.headers.get("x-ratelimit-reset") ?? response.headers.get("ratelimit-reset");
   if (reset && /^\d+$/.test(reset)) {
     const seconds = Number(reset);
     if (seconds > 0 && seconds < 120) return seconds * 1000;

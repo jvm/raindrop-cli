@@ -19,13 +19,7 @@ describe("import commands", () => {
       });
 
       const result = await runCli(
-        [
-          "--base-url",
-          `${mock.url}`,
-          "import",
-          "exists",
-          "https://new.example.com",
-        ],
+        ["--base-url", `${mock.url}`, "import", "exists", "https://new.example.com"],
         { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);
@@ -52,13 +46,7 @@ describe("import commands", () => {
       });
 
       const result = await runCli(
-        [
-          "--base-url",
-          `${mock.url}`,
-          "import",
-          "exists",
-          "https://found.example.com",
-        ],
+        ["--base-url", `${mock.url}`, "import", "exists", "https://found.example.com"],
         { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(0);

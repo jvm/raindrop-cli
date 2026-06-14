@@ -1,9 +1,5 @@
 import { CLIError, ExitCode } from "./errors.js";
-import {
-  activeProfileName,
-  readCredentials,
-  writeCredentials,
-} from "./config.js";
+import { activeProfileName, readCredentials, writeCredentials } from "./config.js";
 import { getProfile, setProfile, deleteProfile } from "./profiles-map.js";
 
 export type OAuthTokens = {
@@ -22,8 +18,7 @@ export async function resolveToken(
   const name = await activeProfileName(profile);
   const creds = await readCredentials();
   const selected =
-    getProfile(creds, name) ??
-    (name !== "default" ? undefined : getProfile(creds, "default"));
+    getProfile(creds, name) ?? (name !== "default" ? undefined : getProfile(creds, "default"));
   if (selected?.access_token)
     return {
       token: selected.access_token,
@@ -39,10 +34,7 @@ export async function resolveToken(
   });
 }
 
-export async function storeToken(
-  token: string,
-  profile?: string,
-): Promise<string> {
+export async function storeToken(token: string, profile?: string): Promise<string> {
   const name = await activeProfileName(profile);
   const creds = await readCredentials();
   setProfile(creds, name, {
@@ -131,8 +123,7 @@ export async function refreshStoredToken(
 ): Promise<string | undefined> {
   const creds = await readCredentials();
   const current = getProfile(creds, profile);
-  if (!current?.refresh_token || !current.client_id || !current.client_secret)
-    return undefined;
+  if (!current?.refresh_token || !current.client_id || !current.client_secret) return undefined;
   const response = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -145,23 +136,16 @@ export async function refreshStoredToken(
   });
   if (!response.ok) return undefined;
   const data = (await response.json()) as Record<string, unknown>;
-  const expiresIn =
-    typeof data.expires_in === "number" ? data.expires_in : undefined;
-  const accessToken =
-    typeof data.access_token === "string" ? data.access_token : undefined;
+  const expiresIn = typeof data.expires_in === "number" ? data.expires_in : undefined;
+  const accessToken = typeof data.access_token === "string" ? data.access_token : undefined;
   if (!accessToken) return undefined;
   setProfile(creds, profile, {
     ...current,
     access_token: accessToken,
     refresh_token:
-      typeof data.refresh_token === "string"
-        ? data.refresh_token
-        : current.refresh_token,
-    token_type:
-      typeof data.token_type === "string" ? data.token_type : "Bearer",
-    ...(expiresIn
-      ? { expires_at: new Date(Date.now() + expiresIn * 1000).toISOString() }
-      : {}),
+      typeof data.refresh_token === "string" ? data.refresh_token : current.refresh_token,
+    token_type: typeof data.token_type === "string" ? data.token_type : "Bearer",
+    ...(expiresIn ? { expires_at: new Date(Date.now() + expiresIn * 1000).toISOString() } : {}),
   });
   await writeCredentials(creds);
   return accessToken;

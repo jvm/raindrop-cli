@@ -21,8 +21,7 @@ export async function postWebhook(
     method: "POST",
     redirect: "manual",
     headers: {
-      "Content-Type":
-        typeof payload === "string" ? "text/plain" : "application/json",
+      "Content-Type": typeof payload === "string" ? "text/plain" : "application/json",
     },
     body,
   });
@@ -48,10 +47,7 @@ export async function postWebhook(
   };
 }
 
-async function assertPublicWebhookHost(
-  url: URL,
-  allowPrivate: boolean,
-): Promise<void> {
+async function assertPublicWebhookHost(url: URL, allowPrivate: boolean): Promise<void> {
   if (allowPrivate) return;
   const hostname = url.hostname;
   if (!hostname)
@@ -60,8 +56,7 @@ async function assertPublicWebhookHost(
       message: "Webhook URL has no hostname",
       exitCode: ExitCode.Usage,
     });
-  if (hostname === "localhost" || hostname === "ip6-localhost")
-    throw blockedWebhookError(hostname);
+  if (hostname === "localhost" || hostname === "ip6-localhost") throw blockedWebhookError(hostname);
   const address = isIP(hostname) ? hostname : "";
   if (address) {
     if (isPrivateIp(address)) throw blockedWebhookError(address);
@@ -104,8 +99,7 @@ function normalizeMappedIpv4(ip: string): string {
 
 function isPrivateIpv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part)))
-    return false;
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part))) return false;
   const [a, b] = parts as [number, number, number, number];
   if (a === 0 || a === 10 || a === 127) return true;
   if (a === 100 && b >= 64 && b <= 127) return true; // carrier-grade NAT

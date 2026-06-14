@@ -12,11 +12,7 @@ type InstallTelemetryState = {
 
 function isTruthyEnvFlag(value: string | undefined): boolean {
   if (!value) return false;
-  return (
-    value === "1" ||
-    value.toLowerCase() === "true" ||
-    value.toLowerCase() === "yes"
-  );
+  return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
 }
 
 function isInstallTelemetryEnabled(hasExplicitEndpoint = false): boolean {
@@ -33,9 +29,7 @@ function installTelemetryStatePath(): string {
   return join(stateDir(), "install-telemetry.json");
 }
 
-async function readInstallTelemetryState(
-  path: string,
-): Promise<InstallTelemetryState> {
+async function readInstallTelemetryState(path: string): Promise<InstallTelemetryState> {
   try {
     return JSON.parse(await readFile(path, "utf8")) as InstallTelemetryState;
   } catch {
@@ -47,9 +41,7 @@ function installTelemetryUserAgent(version: string): string {
   const runtimeVersions = process.versions as NodeJS.ProcessVersions & {
     bun?: string;
   };
-  const runtime = runtimeVersions.bun
-    ? `bun/${runtimeVersions.bun}`
-    : `node/${process.version}`;
+  const runtime = runtimeVersions.bun ? `bun/${runtimeVersions.bun}` : `node/${process.version}`;
   return `${TOOL_NAME}/${version} (${process.platform}; ${runtime}; ${process.arch})`;
 }
 

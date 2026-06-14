@@ -138,16 +138,7 @@ describe("delivery", () => {
     const dir = await setupDir();
     try {
       const result = await runCli(
-        [
-          "export",
-          "bookmarks",
-          "0",
-          "csv",
-          "--output",
-          "a.csv",
-          "--deliver",
-          "file:b.csv",
-        ],
+        ["export", "bookmarks", "0", "csv", "--output", "a.csv", "--deliver", "file:b.csv"],
         { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
       );
       expect(result.code).toBe(2);
@@ -161,10 +152,10 @@ describe("delivery", () => {
   it("rejects unsupported delivery schemes before network", async () => {
     const dir = await setupDir();
     try {
-      const result = await runCli(
-        ["export", "bookmarks", "0", "csv", "--deliver", "ftp://bad"],
-        { env: { RAINDROP_ACCESS_TOKEN: "test-token" }, configDir: dir },
-      );
+      const result = await runCli(["export", "bookmarks", "0", "csv", "--deliver", "ftp://bad"], {
+        env: { RAINDROP_ACCESS_TOKEN: "test-token" },
+        configDir: dir,
+      });
       expect(result.code).toBe(2);
       const err = JSON.parse(result.stderr);
       expect(err.error.code).toBe("invalid_delivery");

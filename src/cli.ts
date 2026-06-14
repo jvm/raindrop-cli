@@ -34,29 +34,14 @@ import {
   fixPrivateFilePermissions,
   type RuntimeContext,
 } from "./core/config.js";
-import {
-  credentialsPath,
-  feedbackPath,
-  jobsPath,
-  profilesPath,
-} from "./core/paths.js";
+import { credentialsPath, feedbackPath, jobsPath, profilesPath } from "./core/paths.js";
 import { CLIError, ExitCode, toCLIError } from "./core/errors.js";
 import { commandSpecs } from "./generated/command-specs.js";
-import {
-  writeOutput,
-  table,
-  keyval,
-  itemSummary,
-  setColorEnabled,
-} from "./core/output.js";
+import { writeOutput, table, keyval, itemSummary, setColorEnabled } from "./core/output.js";
 import { parseData, readStdin, mergeBody } from "./core/body.js";
 import { postWebhook } from "./core/webhook.js";
 import { reportInstallTelemetry } from "./core/telemetry.js";
-import {
-  getProfile,
-  getProfileConfig,
-  setProfileConfig,
-} from "./core/profiles-map.js";
+import { getProfile, getProfileConfig, setProfileConfig } from "./core/profiles-map.js";
 import {
   assertRegularFile,
   backupFormats,
@@ -73,9 +58,8 @@ import {
   validateLimit,
 } from "./core/validators.js";
 
-const version = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
-).version as string;
+const version = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+  .version as string;
 
 type Handler<T extends unknown[] = unknown[]> = (...args: T) => Promise<void>;
 
@@ -142,11 +126,7 @@ function listEnvelope(response: any, page: number, perpage: number): any {
   };
 }
 
-async function render(
-  value: unknown,
-  human: string | undefined,
-  opts: any,
-): Promise<void> {
+async function render(value: unknown, human: string | undefined, opts: any): Promise<void> {
   const outputMode = (await resolveRuntime(opts)).output;
   writeOutput(value, human, outputMode);
 }
@@ -165,10 +145,7 @@ function withErrors<T extends unknown[]>(fn: Handler<T>): Handler<T> {
 
 export function buildProgram(): Command {
   const program = new Command();
-  program
-    .name("raindrop")
-    .description("Agent-friendly CLI for Raindrop.io")
-    .version(version);
+  program.name("raindrop").description("Agent-friendly CLI for Raindrop.io").version(version);
   program
     .option("--json", "force JSON output")
     .option("--human", "human output")
@@ -183,16 +160,11 @@ export function buildProgram(): Command {
     const opts = actionCommand.optsWithGlobals();
     if (opts.noColor) setColorEnabled(false);
     setConfigPathOverride(
-      typeof opts.config === "string" && opts.config.length > 0
-        ? opts.config
-        : undefined,
+      typeof opts.config === "string" && opts.config.length > 0 ? opts.config : undefined,
     );
     if (opts.requestSchema || opts.responseSchema) {
       writeOutput(
-        simpleSchema(
-          actionCommand,
-          opts.requestSchema ? "request" : "response",
-        ),
+        simpleSchema(actionCommand, opts.requestSchema ? "request" : "response"),
         undefined,
         "json",
       );
@@ -227,9 +199,7 @@ export function buildProgram(): Command {
             message: `Unknown agent-context command: ${opts.command}`,
             exitCode: ExitCode.Usage,
           });
-        const selected = opts.command
-          ? { [opts.command]: commands[opts.command] }
-          : commands;
+        const selected = opts.command ? { [opts.command]: commands[opts.command] } : commands;
         await render(
           {
             schema_version: "1",
@@ -313,9 +283,7 @@ export function buildProgram(): Command {
             checks.push({
               name: "credentials_permissions",
               ok: false,
-              hint:
-                e.hint ??
-                `Run: chmod 600 ${credentialsPath()} or use --fix-permissions`,
+              hint: e.hint ?? `Run: chmod 600 ${credentialsPath()} or use --fix-permissions`,
             });
           }
         }
@@ -401,8 +369,7 @@ export function buildProgram(): Command {
 
         const allOk = checks.every((c) => c.ok);
         const failedAuth =
-          !allOk &&
-          checks.filter((c) => !c.ok).every((c) => c.name.startsWith("auth"));
+          !allOk && checks.filter((c) => !c.ok).every((c) => c.name.startsWith("auth"));
 
         if (failedAuth && !allOk) process.exitCode = ExitCode.Auth;
         else if (!allOk) process.exitCode = ExitCode.Failure;
@@ -513,10 +480,7 @@ function registerAuth(program: Command): void {
           url.searchParams.set("redirect_uri", opts.redirectUri);
           url.searchParams.set("response_type", "code");
           const redirect = new URL(opts.redirectUri);
-          if (
-            redirect.hostname === "127.0.0.1" ||
-            redirect.hostname === "localhost"
-          ) {
+          if (redirect.hostname === "127.0.0.1" || redirect.hostname === "localhost") {
             const codePromise = waitForOAuthCode(redirect);
             if (opts.browser !== false) openBrowser(String(url));
             const code = await codePromise;
@@ -541,11 +505,7 @@ function registerAuth(program: Command): void {
             exitCode: ExitCode.Usage,
           });
         const profile = await storeToken(token, rootOptions(cmd).profile);
-        await render(
-          { result: true, profile },
-          `Logged in profile ${profile}`,
-          rootOptions(cmd),
-        );
+        await render({ result: true, profile }, `Logged in profile ${profile}`, rootOptions(cmd));
       }),
     );
   auth.command("status").action(
@@ -570,22 +530,14 @@ function registerAuth(program: Command): void {
       withErrors(async (opts, cmd) => {
         requireForce(opts.force, "auth logout");
         const profile = await clearProfileToken(rootOptions(cmd).profile);
-        await render(
-          { result: true, profile },
-          `Logged out profile ${profile}`,
-          rootOptions(cmd),
-        );
+        await render({ result: true, profile }, `Logged out profile ${profile}`, rootOptions(cmd));
       }),
     );
   auth.command("refresh").action(
     withErrors(async (_opts, cmd) => {
       const runtime = await resolveRuntime(rootOptions(cmd));
       const current = (await readCredentials()).profiles[runtime.profile];
-      if (
-        !current?.refresh_token ||
-        !current.client_id ||
-        !current.client_secret
-      )
+      if (!current?.refresh_token || !current.client_id || !current.client_secret)
         throw new CLIError({
           code: "refresh_unavailable",
           message: "Selected profile has no refresh token/client credentials",
@@ -753,10 +705,7 @@ function registerProfile(program: Command): void {
         const existing = getProfileConfig(profiles, name) ?? {};
         const updated: typeof existing = { ...existing };
         if (opts.defaultCollection !== undefined)
-          updated.default_collection = intArg(
-            opts.defaultCollection,
-            "--default-collection",
-          );
+          updated.default_collection = intArg(opts.defaultCollection, "--default-collection");
         if (opts.output !== undefined)
           updated.output = validateEnum(
             opts.output,
@@ -766,11 +715,7 @@ function registerProfile(program: Command): void {
           ) as any;
         setProfileConfig(profiles, name, updated);
         await writeProfiles(profiles);
-        await render(
-          { result: true, name, profile: updated },
-          `saved ${name}`,
-          rootOptions(cmd),
-        );
+        await render({ result: true, name, profile: updated }, `saved ${name}`, rootOptions(cmd));
       }),
     );
   profile
@@ -782,11 +727,7 @@ function registerProfile(program: Command): void {
         const cfg = await readConfig();
         cfg.active_profile = name;
         await writeConfig(cfg);
-        await render(
-          { result: true, active_profile: name },
-          `using ${name}`,
-          rootOptions(cmd),
-        );
+        await render({ result: true, active_profile: name }, `using ${name}`, rootOptions(cmd));
       }),
     );
   profile
@@ -799,11 +740,7 @@ function registerProfile(program: Command): void {
         const profiles = await readProfiles();
         delete profiles.profiles[`${name}`];
         await writeProfiles(profiles);
-        await render(
-          { result: true, name },
-          `deleted ${name}`,
-          rootOptions(cmd),
-        );
+        await render({ result: true, name }, `deleted ${name}`, rootOptions(cmd));
       }),
     );
 }
@@ -815,21 +752,13 @@ function registerFeedback(program: Command): void {
       if (!message) return;
       const entry = { ts: new Date().toISOString(), message };
       await appendJsonl(feedbackPath(), entry);
-      await render(
-        { result: true, entry },
-        `recorded feedback`,
-        rootOptions(cmd),
-      );
+      await render({ result: true, entry }, `recorded feedback`, rootOptions(cmd));
     }),
   );
   fb.command("list").action(
     withErrors(async (_opts, cmd) => {
       const items = await readJsonl(feedbackPath());
-      await render(
-        { result: true, items },
-        table(items, ["ts", "message"]),
-        rootOptions(cmd),
-      );
+      await render({ result: true, items }, table(items, ["ts", "message"]), rootOptions(cmd));
     }),
   );
   fb.command("clear")
@@ -847,8 +776,7 @@ function registerFeedback(program: Command): void {
     .option("--force")
     .action(
       withErrors(async (opts, cmd) => {
-        const endpoint =
-          opts.endpoint ?? process.env.RAINDROP_FEEDBACK_ENDPOINT;
+        const endpoint = opts.endpoint ?? process.env.RAINDROP_FEEDBACK_ENDPOINT;
         if (!endpoint)
           throw new CLIError({
             code: "endpoint_required",
@@ -983,11 +911,7 @@ function registerCollections(program: Command): void {
         operationName: "collection.children",
       });
       const items = pickList(r, "items", "collections");
-      await render(
-        r,
-        table(items, ["_id", "title", "parent", "count"]),
-        rootOptions(cmd),
-      );
+      await render(r, table(items, ["_id", "title", "parent", "count"]), rootOptions(cmd));
     }),
   );
   c.command("tree").action(
@@ -1059,9 +983,7 @@ function registerCollections(program: Command): void {
                 "raindrop collection create --view list",
               )
             : undefined,
-          parent: opts.parent
-            ? { $id: intArg(opts.parent, "--parent") }
-            : undefined,
+          parent: opts.parent ? { $id: intArg(opts.parent, "--parent") } : undefined,
         });
         await render(
           await client(cmd).request({
@@ -1085,8 +1007,7 @@ function registerCollections(program: Command): void {
       withErrors(async (id, opts, cmd) => {
         const body = mergeBody(await parseData(opts.data), {
           title: opts.title,
-          public:
-            opts.public === undefined ? undefined : opts.public === "true",
+          public: opts.public === undefined ? undefined : opts.public === "true",
           view: opts.view
             ? validateEnum(
                 opts.view,
@@ -1328,11 +1249,7 @@ function registerCollections(program: Command): void {
           role: x.role,
           email: x.user?.email ?? x.email,
         }));
-        await render(
-          r,
-          table(rows, ["user", "role", "email"]),
-          rootOptions(cmd),
-        );
+        await render(r, table(rows, ["user", "role", "email"]), rootOptions(cmd));
       }),
     );
   sharing
@@ -1463,11 +1380,7 @@ function registerBookmarks(program: Command): void {
     .option("--page <n>", "page", "0")
     .option("--limit <n>", "limit", "50")
     .option("--sort <sort>")
-    .action(
-      withErrors(async (query, opts, cmd) =>
-        bookmarkList({ ...opts, search: query }, cmd),
-      ),
-    );
+    .action(withErrors(async (query, opts, cmd) => bookmarkList({ ...opts, search: query }, cmd)));
   b.command("get")
     .argument("<id>")
     .action(
@@ -1525,10 +1438,7 @@ function registerBookmarks(program: Command): void {
           const existing = findExisting(exists, url);
           if (existing)
             return render(
-              withScope(
-                { result: true, existing: true, item: existing },
-                scope,
-              ),
+              withScope({ result: true, existing: true, item: existing }, scope),
               "(existing bookmark)",
               rootOptions(cmd),
             );
@@ -1598,10 +1508,7 @@ function registerBookmarks(program: Command): void {
             ? { $id: intArg(opts.collection, "--collection") }
             : undefined,
           tags: opts.tag,
-          important:
-            opts.important === undefined
-              ? undefined
-              : opts.important === "true",
+          important: opts.important === undefined ? undefined : opts.important === "true",
           pleaseParse: opts.parse ? {} : undefined,
         });
         const scope = await resolveMutationScope(
@@ -1640,13 +1547,11 @@ function registerBookmarks(program: Command): void {
             operationName: "bookmark.get",
           });
           const item = pickItem(current, "item", "raindrop");
-          resolvedCollectionId =
-            item.collection?.$id ?? item.collectionId ?? item.collection;
+          resolvedCollectionId = item.collection?.$id ?? item.collectionId ?? item.collection;
           if (resolvedCollectionId === -99) {
             process.stderr.write(
               JSON.stringify({
-                warning:
-                  "Deleting a bookmark from Trash can permanently remove it",
+                warning: "Deleting a bookmark from Trash can permanently remove it",
                 bookmark_id: bookmarkId,
               }) + "\n",
             );
@@ -1729,9 +1634,7 @@ function registerBookmarks(program: Command): void {
         );
         const bookmarkId = intArg(id, "id");
         const path =
-          variant === "cache"
-            ? `/raindrop/${bookmarkId}/cache`
-            : `/raindrop/${bookmarkId}`;
+          variant === "cache" ? `/raindrop/${bookmarkId}/cache` : `/raindrop/${bookmarkId}`;
         const query = variant === "cover" ? { redirect: "cover" } : undefined;
         await render(
           await client(cmd).request({
@@ -1889,12 +1792,7 @@ async function bookmarkList(opts: any, cmd?: Command): Promise<void> {
   const page = intArg(String(opts.page ?? 0), "--page");
   const perpage = validateLimit(opts.limit);
   const sort = opts.sort
-    ? validateEnum(
-        opts.sort,
-        bookmarkSorts,
-        "sort",
-        "raindrop bookmark list --sort -created",
-      )
+    ? validateEnum(opts.sort, bookmarkSorts, "sort", "raindrop bookmark list --sort -created")
     : undefined;
   const r: any = await client(cmd).request({
     method: "GET",
@@ -1903,11 +1801,7 @@ async function bookmarkList(opts: any, cmd?: Command): Promise<void> {
     operationName: "bookmark.list",
   });
   const env = listEnvelope(r, page, perpage);
-  await render(
-    env,
-    table(env.items ?? [], ["_id", "title", "link"]),
-    rootOptions(cmd),
-  );
+  await render(env, table(env.items ?? [], ["_id", "title", "link"]), rootOptions(cmd));
 }
 
 function registerTags(program: Command): void {
@@ -1925,9 +1819,7 @@ function registerTags(program: Command): void {
         await render(
           r,
           table(
-            pickList(r, "items", "tags").map((x: any) =>
-              typeof x === "string" ? { tag: x } : x,
-            ),
+            pickList(r, "items", "tags").map((x: any) => (typeof x === "string" ? { tag: x } : x)),
             ["tag", "count"],
           ),
           rootOptions(cmd),
@@ -2212,11 +2104,7 @@ function registerImport(program: Command): void {
           body: { urls },
           operationName: "import.exists",
         })) as Record<string, unknown>;
-        await render(
-          { ...response, result: true },
-          "URL existence check",
-          rootOptions(cmd),
-        );
+        await render({ ...response, result: true }, "URL existence check", rootOptions(cmd));
       }),
     );
   i.command("parse-file")
@@ -2270,17 +2158,9 @@ function registerBackups(program: Command): void {
     .action(
       withErrors(async (opts, cmd) => {
         // Look for an in-progress backup.generate job from a recent retry.
-        const recentInProgress = await findInProgressJob(
-          "backup.generate",
-          15 * 60_000,
-        );
+        const recentInProgress = await findInProgressJob("backup.generate", 15 * 60_000);
         const resuming = Boolean(opts.resume) && recentInProgress;
-        if (
-          !opts.resume &&
-          recentInProgress &&
-          opts.wait &&
-          process.stderr.isTTY === false
-        ) {
+        if (!opts.resume && recentInProgress && opts.wait && process.stderr.isTTY === false) {
           await render(
             {
               result: false,
@@ -2294,9 +2174,7 @@ function registerBackups(program: Command): void {
           return;
         }
         const jobId =
-          resuming && recentInProgress
-            ? String(recentInProgress.id)
-            : `backup-${Date.now()}`;
+          resuming && recentInProgress ? String(recentInProgress.id) : `backup-${Date.now()}`;
         let baselineId: number | undefined =
           resuming && recentInProgress
             ? (recentInProgress.baseline_id as number | undefined)
@@ -2312,9 +2190,7 @@ function registerBackups(program: Command): void {
               operationName: "backup.list",
             });
             const items = pickList(initial, "items", "backups");
-            baselineId = items.length
-              ? Number(items[0]._id ?? items[0].id)
-              : undefined;
+            baselineId = items.length ? Number(items[0]._id ?? items[0].id) : undefined;
           } catch {
             // continue without baseline
           }
@@ -2351,12 +2227,9 @@ function registerBackups(program: Command): void {
             operationName: "backup.list",
           });
           const items = pickList(last, "items", "backups");
-          const newest = items.length
-            ? Number(items[0]._id ?? items[0].id)
-            : undefined;
+          const newest = items.length ? Number(items[0]._id ?? items[0].id) : undefined;
           const hasNewBackup =
-            newest !== undefined &&
-            (baselineId === undefined || newest !== baselineId);
+            newest !== undefined && (baselineId === undefined || newest !== baselineId);
           if (hasNewBackup) {
             await appendJsonl(jobsPath(), {
               id: jobId,
@@ -2453,15 +2326,12 @@ function registerJobs(program: Command): void {
         const cutoff = Date.now() - parseDurationMs(opts.olderThan);
         const items = await readJsonl(jobsPath());
         const kept = items.filter(
-          (job: any) =>
-            Date.parse(job.started_at ?? job.ts ?? new Date().toISOString()) >=
-            cutoff,
+          (job: any) => Date.parse(job.started_at ?? job.ts ?? new Date().toISOString()) >= cutoff,
         );
         await mkdir(dirname(jobsPath()), { recursive: true });
         await writeFile(
           jobsPath(),
-          kept.map((job) => JSON.stringify(job)).join("\n") +
-            (kept.length ? "\n" : ""),
+          kept.map((job) => JSON.stringify(job)).join("\n") + (kept.length ? "\n" : ""),
           "utf8",
         );
         await render(
@@ -2501,9 +2371,7 @@ function registerExport(program: Command): void {
             message: "--output and --deliver are mutually exclusive",
             exitCode: ExitCode.Usage,
           });
-        const sink = parseSink(
-          opts.deliver ?? (opts.output ? `file:${opts.output}` : undefined),
-        );
+        const sink = parseSink(opts.deliver ?? (opts.output ? `file:${opts.output}` : undefined));
         const exportPath = `/raindrops/${intArg(collection, "collection")}/export.${format}`;
         if (sink.kind === "stdout") {
           const raw = await client(cmd).request({
@@ -2573,11 +2441,7 @@ function registerApi(program: Command): void {
           "method",
           "raindrop api request GET /user",
         ) as any;
-        if (
-          ["DELETE", "PUT", "POST"].includes(m) &&
-          !opts.force &&
-          m === "DELETE"
-        )
+        if (["DELETE", "PUT", "POST"].includes(m) && !opts.force && m === "DELETE")
           requireForce(opts.force, "api request DELETE");
         if (/^https?:/.test(path) && !opts.absoluteUrl)
           throw new CLIError({
@@ -2627,11 +2491,7 @@ function registerCompletion(program: Command): void {
 
 function openBrowser(url: string): void {
   const command =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "cmd"
-        : "xdg-open";
+    process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
   execFile(command, args, () => undefined);
 }
@@ -2650,9 +2510,7 @@ function waitForOAuthCode(redirectUri: URL): Promise<string> {
         const error = url.searchParams.get("error");
         const code = url.searchParams.get("code");
         if (error || !code) {
-          res
-            .writeHead(400)
-            .end("Raindrop CLI login failed. You may close this tab.");
+          res.writeHead(400).end("Raindrop CLI login failed. You may close this tab.");
           reject(
             new CLIError({
               code: "oauth_callback_failed",
@@ -2661,9 +2519,7 @@ function waitForOAuthCode(redirectUri: URL): Promise<string> {
             }),
           );
         } else {
-          res
-            .writeHead(200)
-            .end("Raindrop CLI login complete. You may close this tab.");
+          res.writeHead(200).end("Raindrop CLI login complete. You may close this tab.");
           resolve(code);
         }
       } finally {
@@ -2733,8 +2589,7 @@ async function lookupCollectionTitle(
   cmd: Command | undefined,
   collectionId: number,
 ): Promise<string | undefined> {
-  if (collectionTitleCache.has(collectionId))
-    return collectionTitleCache.get(collectionId);
+  if (collectionTitleCache.has(collectionId)) return collectionTitleCache.get(collectionId);
   if (collectionId === 0) {
     collectionTitleCache.set(collectionId, "All bookmarks");
     return "All bookmarks";
@@ -2803,10 +2658,7 @@ async function emitScopeHeader(
   process.stderr.write(`-> ${parts.join(" ")}\n`);
 }
 
-type Sink =
-  | { kind: "stdout" }
-  | { kind: "file"; path: string }
-  | { kind: "webhook"; url: string };
+type Sink = { kind: "stdout" } | { kind: "file"; path: string } | { kind: "webhook"; url: string };
 
 function parseSink(s: string | undefined): Sink {
   if (!s || s === "stdout") return { kind: "stdout" };
@@ -2825,8 +2677,7 @@ async function resolveCollectionArg(
   cmd: Command | undefined,
   fallback?: number,
 ): Promise<number> {
-  if (opts.collection !== undefined)
-    return intArg(String(opts.collection), "--collection");
+  if (opts.collection !== undefined) return intArg(String(opts.collection), "--collection");
   if (fallback !== undefined) return fallback;
   return (await resolveRuntime(rootOptions(cmd))).default_collection;
 }
@@ -2840,17 +2691,9 @@ function withScope(value: any, scope: any): any {
   return { ...value, target: scope };
 }
 
-async function renderDryRun(
-  body: unknown,
-  scope: any,
-  cmd: Command | undefined,
-): Promise<void> {
+async function renderDryRun(body: unknown, scope: any, cmd: Command | undefined): Promise<void> {
   const value = { result: true, dry_run: true, request: body };
-  await render(
-    scope ? withScope(value, scope) : value,
-    "(dry run)",
-    rootOptions(cmd),
-  );
+  await render(scope ? withScope(value, scope) : value, "(dry run)", rootOptions(cmd));
 }
 
 function validateTagName(value: string, label: string): void {
@@ -2869,8 +2712,7 @@ function assertIfVersion(item: any, expected: string | undefined): void {
   if (current === undefined || current === null)
     throw new CLIError({
       code: "version_unknown",
-      message:
-        "Bookmark does not expose a comparable version field for --if-version",
+      message: "Bookmark does not expose a comparable version field for --if-version",
       hint: "Omit --if-version, or refresh after the API exposes lastUpdate",
       exitCode: ExitCode.Usage,
     });
@@ -2883,22 +2725,13 @@ function assertIfVersion(item: any, expected: string | undefined): void {
     });
 }
 
-function markPartial(
-  response: any,
-  expected: number,
-  kind: "create" | "modify",
-): any {
+function markPartial(response: any, expected: number, kind: "create" | "modify"): any {
   if (!response || typeof response !== "object") return response;
   const items = pickList(response, "items", "raindrops");
   const itemsLen = items.length || undefined;
   const modified = pickModified(response);
-  const actual =
-    kind === "create" ? (itemsLen ?? modified) : (modified ?? itemsLen);
-  if (
-    typeof actual === "number" &&
-    Number.isFinite(actual) &&
-    actual < expected
-  ) {
+  const actual = kind === "create" ? (itemsLen ?? modified) : (modified ?? itemsLen);
+  if (typeof actual === "number" && Number.isFinite(actual) && actual < expected) {
     process.exitCode = ExitCode.Partial;
     return {
       ...response,
@@ -2921,10 +2754,7 @@ function parseDurationMs(value: string): number {
     });
   const amount = Number(match[1]);
   const unit = match[2] ?? "ms";
-  return (
-    amount *
-    ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[`${unit}`] ?? 1)
-  );
+  return amount * ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[`${unit}`] ?? 1);
 }
 
 function collect(value: string, previous: string[] = []): string[] {
@@ -2997,10 +2827,7 @@ function treeHuman(roots: any, children: any): string {
   );
 }
 
-function simpleSchema(
-  command: Command,
-  kind: "request" | "response",
-): Record<string, unknown> {
+function simpleSchema(command: Command, kind: "request" | "response"): Record<string, unknown> {
   const responseSchema = {
     type: "object",
     properties: { result: { type: "boolean" } },
@@ -3027,10 +2854,7 @@ function agentCommands(): Record<string, any> {
 function isMainModule(): boolean {
   if (!process.argv[1]) return false;
   try {
-    return (
-      realpathSync(fileURLToPath(import.meta.url)) ===
-      realpathSync(process.argv[1])
-    );
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
   } catch {
     return false;
   }

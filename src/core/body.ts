@@ -8,9 +8,7 @@ export async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-export async function parseData(
-  input?: string,
-): Promise<Record<string, unknown>> {
+export async function parseData(input?: string): Promise<Record<string, unknown>> {
   if (!input) return {};
   let text: string;
   if (input === "-") text = await readStdin();

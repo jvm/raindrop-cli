@@ -50,13 +50,9 @@ function cleanChildEnv(
  * `globalSetup` builds `dist/` once, then every `runCli` is
  * `node dist/cli.js` which is sub-100ms per invocation.
  */
-export async function runCli(
-  args: string[],
-  options: RunCliOptions = {},
-): Promise<CliRunResult> {
+export async function runCli(args: string[], options: RunCliOptions = {}): Promise<CliRunResult> {
   const dir =
-    options.configDir ??
-    (await mkdtemp(join(tmpdir(), options.tmpPrefix ?? "raindrop-cli-")));
+    options.configDir ?? (await mkdtemp(join(tmpdir(), options.tmpPrefix ?? "raindrop-cli-")));
   try {
     return await exec("node", ["dist/cli.js", ...args], {
       env: cleanChildEnv(dir, options.env),

@@ -29,15 +29,7 @@ describe("mutation scope on bookmark commands", () => {
         body: { result: true, item: { _id: 123, title: "Reading list" } },
       });
       const result = await runCli(
-        [
-          "--base-url",
-          mock.url,
-          "bookmark",
-          "add",
-          "https://x.example",
-          "--collection",
-          "123",
-        ],
+        ["--base-url", mock.url, "bookmark", "add", "https://x.example", "--collection", "123"],
         { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).toBe(0);
@@ -46,9 +38,7 @@ describe("mutation scope on bookmark commands", () => {
       expect(parsed.target.profile).toBe("default");
       expect(parsed.target.collection_id).toBe(123);
       expect(parsed.target.collection_title).toBeUndefined();
-      const lookup = mock.requests.find((r) =>
-        r.url.startsWith("/collection/123"),
-      );
+      const lookup = mock.requests.find((r) => r.url.startsWith("/collection/123"));
       expect(lookup).toBeUndefined();
     } finally {
       await mock.close();
@@ -116,15 +106,7 @@ describe("mutation scope on bookmark commands", () => {
         body: { result: true, item: { _id: 1 } },
       });
       const result = await runCli(
-        [
-          "--base-url",
-          mock.url,
-          "bookmark",
-          "add",
-          "https://z.example",
-          "--collection",
-          "-1",
-        ],
+        ["--base-url", mock.url, "bookmark", "add", "https://z.example", "--collection", "-1"],
         { env: { RAINDROP_ACCESS_TOKEN: "tok" }, configDir: dir },
       );
       expect(result.code).toBe(0);
@@ -132,9 +114,7 @@ describe("mutation scope on bookmark commands", () => {
       expect(parsed.target.collection_id).toBe(-1);
       expect(parsed.target.collection_title).toBe("Unsorted");
       // No /collection/-1 GET should have been made
-      const lookup = mock.requests.find((r) =>
-        r.url.startsWith("/collection/-1"),
-      );
+      const lookup = mock.requests.find((r) => r.url.startsWith("/collection/-1"));
       expect(lookup).toBeUndefined();
     } finally {
       await mock.close();

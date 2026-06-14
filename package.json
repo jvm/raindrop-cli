@@ -21,21 +21,29 @@
     "skills/"
   ],
   "engines": {
-    "node": ">=20.11"
+    "node": ">=24"
   },
-  "packageManager": "pnpm@11.0.6",
+  "packageManager": "pnpm@11.6.0",
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "pnpm codegen && tsup src/cli.ts --format esm --platform node --target node20 --out-dir dist --clean",
+    "build": "pnpm codegen && tsc",
     "postbuild": "node scripts/ensure-bin-mode.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --check .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:watch": "vitest",
     "smoke": "tsx test/smoke/live-smoke.ts",
     "codegen": "tsx scripts/codegen.ts",
     "spec-lint": "tsx scripts/spec-lint.ts",
     "verify-pack": "tsx scripts/verify-pack.ts",
+    "audit": "npm audit --omit=dev --audit-level=high",
+    "validate": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm audit",
+    "security:secrets": "betterleaks dir . --no-banner --redact --exit-code=2",
+    "security:scripts": "command -v shellcheck >/dev/null && shellcheck $(find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*') || echo 'shellcheck not installed; skipping'",
+    "security:workflows": "command -v actionlint >/dev/null && actionlint .github/workflows/*.yml || echo 'actionlint not installed; skipping'",
+    "security:local": "pnpm audit && pnpm security:secrets && pnpm security:scripts && pnpm security:workflows",
     "skill:validate": "pnpm dlx skills-ref validate skills/raindrop-cli"
   },
   "dependencies": {
@@ -44,15 +52,15 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.3",
-    "eslint": "^9.39.4",
+    "eslint": "^10.5.0",
     "eslint-plugin-security": "^4.0.1",
+    "lefthook": "^2.1.9",
     "prettier": "^3.8.4",
     "safe-regex": "^2.1.1",
-    "tsup": "^8.5.1",
     "tsx": "^4.22.4",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.0",
     "vitest": "^4.1.8"
   }

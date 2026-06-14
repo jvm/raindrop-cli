@@ -14,19 +14,12 @@ export function writeJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-export function writeOutput(
-  value: unknown,
-  human: string | undefined,
-  mode: OutputMode,
-): void {
+export function writeOutput(value: unknown, human: string | undefined, mode: OutputMode): void {
   if (mode === "human" && human) process.stdout.write(`${human}\n`);
   else writeJson(value);
 }
 
-export function table(
-  rows: Array<Record<string, unknown>>,
-  columns: string[],
-): string {
+export function table(rows: Array<Record<string, unknown>>, columns: string[]): string {
   if (rows.length === 0) return "(none)";
   const widths = columns.map((c) =>
     Math.max(c.length, ...rows.map((r) => String(r[`${c}`] ?? "").length)),
@@ -38,9 +31,7 @@ export function table(
   const sep = widths.map((w) => "-".repeat(w)).join("  ");
   const body = rows
     .map((r) =>
-      columns
-        .map((c, i) => String(r[`${c}`] ?? "").padEnd(widths.at(i) ?? c.length))
-        .join("  "),
+      columns.map((c, i) => String(r[`${c}`] ?? "").padEnd(widths.at(i) ?? c.length)).join("  "),
     )
     .join("\n");
   return `${line}\n${sep}\n${body}`;
@@ -66,15 +57,11 @@ function formatVal(v: unknown): string {
 }
 
 /** Format a single-object human summary */
-export function itemSummary(
-  label: string,
-  fields: Record<string, unknown>,
-): string {
+export function itemSummary(label: string, fields: Record<string, unknown>): string {
   const lines = Object.entries(fields)
     .filter(([, v]) => v !== undefined && v !== null && v !== "")
     .map(([k, v]) => {
-      if (Array.isArray(v))
-        return `  ${k}: ${v.length ? v.join(", ") : "(none)"}`;
+      if (Array.isArray(v)) return `  ${k}: ${v.length ? v.join(", ") : "(none)"}`;
       return `  ${k}: ${v}`;
     });
   return `${label}\n${lines.join("\n")}`;

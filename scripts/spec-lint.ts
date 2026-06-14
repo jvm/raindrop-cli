@@ -46,9 +46,7 @@ for (const cmd of commands) {
   for (const ex of cmd.examples) {
     for (const bf of bannedFlags) {
       if (ex.includes(bf)) {
-        console.error(
-          `FAIL: ${cmd.name} example uses banned flag "${bf}": ${ex}`,
-        );
+        console.error(`FAIL: ${cmd.name} example uses banned flag "${bf}": ${ex}`);
         errors++;
       }
     }

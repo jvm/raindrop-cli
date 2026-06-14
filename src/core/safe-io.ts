@@ -33,22 +33,13 @@ function via(mod: Record<string, AnyFn>, name: string): AnyFn {
   return (...args: unknown[]) => mod[`${name}`]!(...args);
 }
 
-export const readFile: typeof fsp.readFile = via(
-  f,
-  "readFile",
-) as typeof fsp.readFile;
-export const writeFile: typeof fsp.writeFile = via(
-  f,
-  "writeFile",
-) as typeof fsp.writeFile;
+export const readFile: typeof fsp.readFile = via(f, "readFile") as typeof fsp.readFile;
+export const writeFile: typeof fsp.writeFile = via(f, "writeFile") as typeof fsp.writeFile;
 export const mkdir: typeof fsp.mkdir = via(f, "mkdir") as typeof fsp.mkdir;
 export const stat: typeof fsp.stat = via(f, "stat") as typeof fsp.stat;
 export const chmod: typeof fsp.chmod = via(f, "chmod") as typeof fsp.chmod;
 export const rename: typeof fsp.rename = via(f, "rename") as typeof fsp.rename;
-export const appendFile: typeof fsp.appendFile = via(
-  f,
-  "appendFile",
-) as typeof fsp.appendFile;
+export const appendFile: typeof fsp.appendFile = via(f, "appendFile") as typeof fsp.appendFile;
 export const rm: typeof fsp.rm = via(f, "rm") as typeof fsp.rm;
 
 export const createWriteStream: typeof fs.createWriteStream = via(

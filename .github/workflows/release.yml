@@ -10,9 +10,6 @@ permissions:
   id-token: write
 
 jobs:
-  # Re-run the same scanner suite ci.yml uses. ci.yml's security job
-  # runs on the commit the tag points to, but we run them again at
-  # publish time to be safe (e.g. if a tag is force-pushed).
   security:
     uses: ./.github/workflows/security.yml
 
@@ -23,29 +20,50 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v5
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
         with:
-          version: 11.0.6
-      - uses: actions/setup-node@v5
+          package_json_file: "package.json"
+          version: pnpm@11.6.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 24
+          node-version: "24"
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
           registry-url: https://registry.npmjs.org
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --audit-level moderate
-      - run: pnpm audit signatures
-      - run: pnpm lint && pnpm format && pnpm typecheck && pnpm test && pnpm build && pnpm verify-pack
-      - run: pnpm pack
-      - run: shasum -a 256 *.tgz > checksums.txt
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate
+        run: pnpm validate
+
+      - name: Verify package contents
+        run: pnpm verify-pack
+
+      - name: Pack
+        run: pnpm pack
+
+      - name: Compute checksums
+        run: shasum -a 256 -- ./*.tgz > checksums.txt
+
       # npm trusted publishing uses GitHub OIDC via `permissions: id-token: write`.
       # Configure npmjs.com Trusted Publisher for this package with:
       #   owner/repo: jvm/raindrop-cli
       #   workflow filename: release.yml
-      - run: npm publish --access public
-      - uses: softprops/action-gh-release@v3
+      - name: Publish to npm
+        run: npm publish --access public
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             *.tgz

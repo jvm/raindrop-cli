@@ -91,10 +91,9 @@ describe("runtime precedence", () => {
       }),
     });
     try {
-      const result = await runCli(
-        ["--json", "--profile", "work", "config", "list"],
-        { configDir: dir },
-      );
+      const result = await runCli(["--json", "--profile", "work", "config", "list"], {
+        configDir: dir,
+      });
       expect(result.code).toBe(0);
       const parsed = JSON.parse(result.stdout);
       expect(parsed.values.default_collection.value).toBe(123456);

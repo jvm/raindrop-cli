@@ -11,25 +11,13 @@
 // `node.property.type === 'Identifier'` returns false for template
 // literals, so the access is not flagged. Runtime behavior is
 // identical to the previous `creds.profiles[name]` access.
-import type {
-  CredentialProfile,
-  Credentials,
-  Config,
-  Profiles,
-} from "./config.js";
+import type { CredentialProfile, Credentials, Config, Profiles } from "./config.js";
 
-export function getProfile(
-  creds: Credentials,
-  name: string,
-): CredentialProfile | undefined {
+export function getProfile(creds: Credentials, name: string): CredentialProfile | undefined {
   return creds.profiles[`${name}`];
 }
 
-export function setProfile(
-  creds: Credentials,
-  name: string,
-  value: CredentialProfile,
-): void {
+export function setProfile(creds: Credentials, name: string, value: CredentialProfile): void {
   creds.profiles[`${name}`] = value;
 }
 
@@ -37,17 +25,10 @@ export function deleteProfile(creds: Credentials, name: string): void {
   delete creds.profiles[`${name}`];
 }
 
-export function getProfileConfig(
-  profiles: Profiles,
-  name: string,
-): Config | undefined {
+export function getProfileConfig(profiles: Profiles, name: string): Config | undefined {
   return profiles.profiles[`${name}`];
 }
 
-export function setProfileConfig(
-  profiles: Profiles,
-  name: string,
-  value: Config,
-): void {
+export function setProfileConfig(profiles: Profiles, name: string, value: Config): void {
   profiles.profiles[`${name}`] = value;
 }

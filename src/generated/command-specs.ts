@@ -38,8 +38,7 @@ export const commandSpecs: CommandSpec[] = [
   },
   {
     name: "config.list",
-    summary:
-      "List all config values with their source (env, profile, file, default)",
+    summary: "List all config values with their source (env, profile, file, default)",
     examples: ["raindrop config list"],
   },
   {
@@ -70,9 +69,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "profile.save",
     summary: "Save or update a named profile with non-secret defaults",
-    examples: [
-      "raindrop profile save work --default-collection 123456 --output json",
-    ],
+    examples: ["raindrop profile save work --default-collection 123456 --output json"],
   },
   {
     name: "profile.use",
@@ -132,9 +129,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "collection.update",
     summary: "Update a collection",
-    examples: [
-      'raindrop collection update 123 --title "New Title" --public=false',
-    ],
+    examples: ['raindrop collection update 123 --title "New Title" --public=false'],
   },
   {
     name: "collection.delete",
@@ -199,9 +194,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "collection.sharing.invite",
     summary: "Invite users to a collection",
-    examples: [
-      "raindrop collection sharing invite 123 --role viewer --email a@example.com",
-    ],
+    examples: ["raindrop collection sharing invite 123 --role viewer --email a@example.com"],
   },
   {
     name: "collection.sharing.update",
@@ -234,9 +227,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "bookmark.search",
     summary: "Search bookmarks with a query",
-    examples: [
-      'raindrop bookmark search "tag:api type:article" --collection 0',
-    ],
+    examples: ['raindrop bookmark search "tag:api type:article" --collection 0'],
   },
   {
     name: "bookmark.get",
@@ -255,16 +246,12 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "bookmark.create",
     summary: "Create a bookmark with full JSON body",
-    examples: [
-      'raindrop bookmark create -d \'{"link":"https://example.com","title":"Example"}\'',
-    ],
+    examples: ['raindrop bookmark create -d \'{"link":"https://example.com","title":"Example"}\''],
   },
   {
     name: "bookmark.update",
     summary: "Update a bookmark",
-    examples: [
-      'raindrop bookmark update 123 --title "New Title" --tag archived',
-    ],
+    examples: ['raindrop bookmark update 123 --title "New Title" --tag archived'],
   },
   {
     name: "bookmark.delete",
@@ -274,9 +261,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "bookmark.upload-file",
     summary: "Upload a file as a bookmark",
-    examples: [
-      "raindrop bookmark upload-file --file ./paper.pdf --collection 42",
-    ],
+    examples: ["raindrop bookmark upload-file --file ./paper.pdf --collection 42"],
   },
   {
     name: "bookmark.upload-cover",
@@ -286,9 +271,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "bookmark.download",
     summary: "Download a bookmark cache or cover",
-    examples: [
-      "raindrop bookmark download 123 --variant cache --output cached.html",
-    ],
+    examples: ["raindrop bookmark download 123 --variant cache --output cached.html"],
   },
   {
     name: "bookmark.suggest",
@@ -306,16 +289,12 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "bookmark.bulk-update",
     summary: "Update multiple bookmarks in a collection",
-    examples: [
-      "raindrop bookmark bulk-update --collection 42 --ids 1,2,3 --tag archived",
-    ],
+    examples: ["raindrop bookmark bulk-update --collection 42 --ids 1,2,3 --tag archived"],
   },
   {
     name: "bookmark.bulk-delete",
     summary: "Delete multiple bookmarks (requires --force)",
-    examples: [
-      "raindrop bookmark bulk-delete --collection 42 --ids 1,2,3 --force",
-    ],
+    examples: ["raindrop bookmark bulk-delete --collection 42 --ids 1,2,3 --force"],
   },
   {
     name: "tag.list",
@@ -353,16 +332,12 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "highlight.add",
     summary: "Add a highlight to a bookmark",
-    examples: [
-      'raindrop highlight add 123 --text "quote" --color yellow --note "important"',
-    ],
+    examples: ['raindrop highlight add 123 --text "quote" --color yellow --note "important"'],
   },
   {
     name: "highlight.update",
     summary: "Update a highlight on a bookmark",
-    examples: [
-      'raindrop highlight update 123 abc --note "new note" --color green',
-    ],
+    examples: ['raindrop highlight update 123 abc --note "new note" --color green'],
   },
   {
     name: "highlight.delete",
@@ -400,10 +375,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "backup.generate",
     summary: "Trigger backup generation, optionally wait for completion",
-    examples: [
-      "raindrop backup generate",
-      "raindrop backup generate --wait --timeout 10m",
-    ],
+    examples: ["raindrop backup generate", "raindrop backup generate --wait --timeout 10m"],
   },
   {
     name: "backup.download",
@@ -443,9 +415,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "feedback.send",
     summary: "Send feedback to an endpoint",
-    examples: [
-      "raindrop feedback send --endpoint https://example.com/api/feedback",
-    ],
+    examples: ["raindrop feedback send --endpoint https://example.com/api/feedback"],
   },
   {
     name: "doctor",
@@ -455,10 +425,7 @@ export const commandSpecs: CommandSpec[] = [
   {
     name: "agent-context",
     summary: "Print machine-readable CLI context for agents",
-    examples: [
-      "raindrop agent-context",
-      "raindrop agent-context --command bookmark.add",
-    ],
+    examples: ["raindrop agent-context", "raindrop agent-context --command bookmark.add"],
   },
   {
     name: "api.request",

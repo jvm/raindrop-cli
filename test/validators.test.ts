@@ -82,12 +82,7 @@ describe("validators", () => {
     it("rejects invalid enum with valid_values in envelope", () => {
       const err = expectError(
         () =>
-          validateEnum(
-            "invalid",
-            bookmarkSorts,
-            "sort",
-            "raindrop bookmark list --sort -created",
-          ),
+          validateEnum("invalid", bookmarkSorts, "sort", "raindrop bookmark list --sort -created"),
         "invalid_sort",
       );
       expect(err.validValues).toEqual(bookmarkSorts);
@@ -97,12 +92,7 @@ describe("validators", () => {
     it("rejects invalid view", () => {
       const err = expectError(
         () =>
-          validateEnum(
-            "cards",
-            collectionViews,
-            "view",
-            "raindrop collection create --view list",
-          ),
+          validateEnum("cards", collectionViews, "view", "raindrop collection create --view list"),
         "invalid_view",
       );
       expect(err.validValues).toEqual(collectionViews);
@@ -170,10 +160,7 @@ describe("validators", () => {
     });
 
     it("throws when force is false", () => {
-      const err = expectError(
-        () => requireForce(false, "bookmark delete"),
-        "force_required",
-      );
+      const err = expectError(() => requireForce(false, "bookmark delete"), "force_required");
       expect(err.hint).toContain("--force");
     });
 
@@ -248,10 +235,7 @@ describe("validators", () => {
     });
 
     it("force-required errors use exit code 2", () => {
-      const err = expectError(
-        () => requireForce(false, "test"),
-        "force_required",
-      );
+      const err = expectError(() => requireForce(false, "test"), "force_required");
       expect(err.exitCode).toBe(2);
     });
   });
