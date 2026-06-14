@@ -5,3 +5,9 @@ allowBuilds:
   esbuild: true
 
 strictDepBuilds: false
+
+# Force patched esbuild across all transitive users (tsup, vitest, tsx)
+# until each upstream publishes a new release. Removes the two open
+# esbuild advisories (Deno RCE + Windows dev-server file read).
+overrides:
+  esbuild@<0.28.1: 0.28.1
