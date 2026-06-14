@@ -1,0 +1,72 @@
+name: Security scanners
+
+# Reusable security-scanner workflow. Invoked from ci.yml (on every
+# push / PR) and from release.yml (before publishing to npm). The
+# three scanners cover the same threat models with different strengths:
+#   - betterleaks: secret detection (Rust gitleaks rewrite, same author)
+#   - semgrep: SAST via curated rulesets (OWASP, secrets, lang-specific)
+#   - njsscan: Node.js-specific SAST (catches things the others miss,
+#     e.g. crypto-strength RNGs)
+#
+# Any non-zero exit blocks the caller. Inputs:
+#   upload-artifact: also publish the njsscan JSON report as a GH
+#     artifact (useful in ci.yml for debugging; release.yml doesn't
+#     need it).
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifact:
+        description: Upload the njsscan JSON report as a workflow artifact
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  scan:
+    name: Security scanners
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install betterleaks
+        run: |
+          BETTERLEAKS_VERSION=1.5.0
+          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_amd64.tar.gz" -o betterleaks.tar.gz
+          tar -xzf betterleaks.tar.gz betterleaks
+          sudo install -m 0755 betterleaks /usr/local/bin/betterleaks
+      - name: Run betterleaks
+        run: betterleaks dir --no-banner --redact --verbose --source . --exit-code=2
+
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/typescript
+            p/javascript
+            p/security-audit
+            p/secrets
+            p/nodejs
+            p/owasp-top-ten
+        env:
+          SEMGREP_SEND_METRICS: "off"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install njsscan
+        run: pip install --quiet njsscan
+      - name: Run njsscan
+        # --missing-controls is intentionally off: the CLI is not a web
+        # server, so Helmet/CSRF/rate-limit findings are noise. Scoped
+        # to src/ to keep the surface small.
+        run: njsscan --exit-warning --json -o njsscan-results.json src/
+      - name: Upload njsscan report
+        if: always() && inputs.upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: njsscan-report
+          path: njsscan-results.json
+          if-no-files-found: ignore

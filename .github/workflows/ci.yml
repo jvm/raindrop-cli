@@ -26,11 +26,12 @@ jobs:
       - run: pnpm build
       - run: pnpm verify-pack
       - run: pnpm audit --audit-level moderate
-      - name: Install gitleaks
-        run: |
-          GITLEAKS_VERSION=8.30.1
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
-          tar -xzf gitleaks.tar.gz gitleaks
-          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
-      - name: Run gitleaks
-        run: gitleaks detect --redact --verbose --source . --exit-code=2
+      - run: pnpm audit signatures
+
+  # Secret-scan + SAST. Implemented as a reusable workflow so the
+  # same scanner suite also gates the release. Any finding fails
+  # the job, which blocks merge.
+  security:
+    uses: ./.github/workflows/security.yml
+    with:
+      upload-artifact: true

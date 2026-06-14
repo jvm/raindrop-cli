@@ -10,10 +10,22 @@ permissions:
   id-token: write
 
 jobs:
+  # Re-run the same scanner suite ci.yml uses. ci.yml's security job
+  # runs on the commit the tag points to, but we run them again at
+  # publish time to be safe (e.g. if a tag is force-pushed).
+  security:
+    uses: ./.github/workflows/security.yml
+
   release:
+    needs: security
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v5
         with:
           version: 11.0.6
@@ -23,6 +35,8 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level moderate
+      - run: pnpm audit signatures
       - run: pnpm lint && pnpm format && pnpm typecheck && pnpm test && pnpm build && pnpm verify-pack
       - run: pnpm pack
       - run: shasum -a 256 *.tgz > checksums.txt
