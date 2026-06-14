@@ -47,6 +47,8 @@ All commands use pnpm.
   security plugin flags bracket writes/reads on plain objects.
 - **Non-literal array indexing** uses `arr.at(i)`, not `arr[i]`.
 - **Single dynamic property reads** on a plain object use `Reflect.get(obj, key)`.
+- **No inline suppressions** in source (`eslint-disable*`, `ts-ignore`,
+  `ts-expect-error`). Prefer refactors, helper functions, or typed wrappers.
 - **`as any` is not allowed** unless wrapped in a one-line justification
   (`// eslint-disable-next-line @typescript-eslint/no-explicit-any — <why>`).
 - **No blanket `eslint-disable` files.** Disables are per-line with a
@@ -68,6 +70,8 @@ All commands use pnpm.
 - **Dependency audit:** `pnpm audit --audit-level=high` on every PR (`ci.yml`).
   Use pnpm so the repo stays pnpm-first and CI does not depend on a
   package-lock.
+- **No rule-ignoring workflow flags** (for example, actionlint `-ignore`);
+  fix the underlying workflow or shell issue instead.
 - **Trusted publishing (OIDC) for npm** — never commit an `NPM_TOKEN`
   secret.
 - **All GitHub Actions are pinned by SHA**, with a comment showing the
