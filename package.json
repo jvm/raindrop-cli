@@ -38,7 +38,7 @@
     "codegen": "tsx scripts/codegen.ts",
     "spec-lint": "tsx scripts/spec-lint.ts",
     "verify-pack": "tsx scripts/verify-pack.ts",
-    "audit": "npm audit --omit=dev --audit-level=high",
+    "audit": "pnpm audit --audit-level=high",
     "validate": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm audit",
     "security:secrets": "betterleaks dir . --no-banner --redact --exit-code=2",
     "security:scripts": "command -v shellcheck >/dev/null && shellcheck $(find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*') || echo 'shellcheck not installed; skipping'",

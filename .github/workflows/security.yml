@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: "24"
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        run: pnpm audit --audit-level=high
 
   secrets:
     name: Secret scan (betterleaks)
@@ -52,8 +52,8 @@ jobs:
           persist-credentials: false
       - name: Install betterleaks
         run: |
-          BETTERLEAKS_VERSION=1.5.0
-          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_amd64.tar.gz" -o betterleaks.tar.gz
+          BETTERLEAKS_VERSION=1.4.0
+          curl -sSfL "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz" -o betterleaks.tar.gz
           tar -xzf betterleaks.tar.gz betterleaks
           sudo install -m 0755 betterleaks /usr/local/bin/betterleaks
       - name: Run betterleaks

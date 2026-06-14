@@ -33,7 +33,7 @@ All commands use pnpm.
 | `pnpm test`               | Run vitest once                                                     |
 | `pnpm test:watch`         | Run vitest in watch mode                                            |
 | `pnpm build`              | Compile to `dist/` via `tsc`                                        |
-| `pnpm audit`              | `npm audit --omit=dev --audit-level=high`                           |
+| `pnpm audit`              | `pnpm audit --audit-level=high`                                     |
 | `pnpm verify-pack`        | `npm pack --dry-run`                                                |
 | `pnpm validate`           | lint + format:check + typecheck + test + build + audit              |
 | `pnpm security:secrets`   | betterleaks on the working tree (full scan)                         |
@@ -65,9 +65,9 @@ All commands use pnpm.
   a guarantee.
 - **Secret scan:** betterleaks on every PR and push (`security.yml`).
 - **CodeQL:** weekly + on PRs that touch `src/**` (`security.yml`).
-- **Dependency audit:** `npm audit --omit=dev --audit-level=high` on every
-  PR (`ci.yml`). Use npm (not pnpm) for the registry talk so the
-  vulnerability database is the authoritative source.
+- **Dependency audit:** `pnpm audit --audit-level=high` on every PR (`ci.yml`).
+  Use pnpm so the repo stays pnpm-first and CI does not depend on a
+  package-lock.
 - **Trusted publishing (OIDC) for npm** — never commit an `NPM_TOKEN`
   secret.
 - **All GitHub Actions are pinned by SHA**, with a comment showing the

@@ -91,13 +91,29 @@ const commands = parseCommandsYaml(specText);
 const generatedDir = join(root, "src/generated");
 mkdirSync(generatedDir, { recursive: true });
 
+const commandSpecsPath = join(generatedDir, "command-specs.ts");
+const docsPath = join(root, "docs/commands.md");
+const prettierOptions = {
+  semi: true,
+  trailingComma: "all",
+  singleQuote: false,
+  printWidth: 100,
+  tabWidth: 2,
+  useTabs: false,
+  arrowParens: "always",
+  endOfLine: "lf",
+} as const;
+
 writeFileSync(
-  join(generatedDir, "command-specs.ts"),
-  await format(generateSpecs(commands), { parser: "typescript" }),
+  commandSpecsPath,
+  await format(generateSpecs(commands), {
+    parser: "typescript",
+    ...prettierOptions,
+  }),
 );
 writeFileSync(
-  join(root, "docs/commands.md"),
-  await format(generateDocs(commands), { parser: "markdown" }),
+  docsPath,
+  await format(generateDocs(commands), { parser: "markdown", ...prettierOptions }),
 );
 
 console.log(`Generated specs for ${commands.length} commands`);
