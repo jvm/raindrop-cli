@@ -7,6 +7,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseCommandsYaml } from "./lib/parse-commands-yaml.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -20,56 +21,6 @@ const bannedFlags = [
   "--no-prompt",
   "--quiet-confirm",
 ];
-
-interface CommandSpec {
-  name: string;
-  summary: string;
-  examples: string[];
-}
-
-function parseCommandsYaml(text: string): CommandSpec[] {
-  const commands: CommandSpec[] = [];
-  let current: CommandSpec | null = null;
-  let inExamples = false;
-
-  for (const line of text.split("\n")) {
-    const trimmed = line.trimEnd();
-    if (trimmed === "" || trimmed.startsWith("#")) continue;
-
-    const cmdMatch = trimmed.match(/^ {2}([a-z._-]+):$/);
-    if (cmdMatch && cmdMatch[1]) {
-      if (current) commands.push(current);
-      current = { name: cmdMatch[1], summary: "", examples: [] };
-      inExamples = false;
-      continue;
-    }
-
-    if (!current) continue;
-
-    const summaryMatch = trimmed.match(/^ {4}summary:\s*"?(.+?)"?\s*$/);
-    if (summaryMatch && summaryMatch[1]) {
-      current.summary = summaryMatch[1];
-      inExamples = false;
-      continue;
-    }
-
-    if (trimmed === "    examples:") {
-      inExamples = true;
-      continue;
-    }
-
-    if (inExamples) {
-      const exMatch = trimmed.match(/^ {6}- (.+)$/);
-      if (exMatch && exMatch[1]) {
-        current.examples.push(exMatch[1].trim());
-        continue;
-      }
-      inExamples = false;
-    }
-  }
-  if (current) commands.push(current);
-  return commands;
-}
 
 const specText = readFileSync(join(root, "spec/commands.yaml"), "utf8");
 const commands = parseCommandsYaml(specText);
