@@ -113,7 +113,7 @@ jobs:
           persist-credentials: false
       - uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
         with:
-          ignore: SC1091
+          flags: -ignore SC1091
       - name: Install zizmor
         env:
           GH_TOKEN: ${{ github.token }}
