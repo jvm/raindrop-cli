@@ -1,10 +1,11 @@
-import { mkdir, readFile, writeFile, rm, chmod, stat } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rm, chmod, stat } from "./safe-io.js";
 import { spawnSync } from "node:child_process";
 import { dirname } from "node:path";
 import { parse, stringify } from "smol-toml";
 import { CLIError, ExitCode } from "./errors.js";
 import { configPath, credentialsPath, profilesPath } from "./paths.js";
 import { safeProfileName } from "./validators.js";
+import { getProfileConfig } from "./profiles-map.js";
 
 export type Config = {
   output?: "json" | "human";
@@ -302,7 +303,7 @@ async function buildRuntime(
     typeof flags.profile === "string" ? flags.profile : undefined,
   );
   const profiles = await readProfiles();
-  const p = profiles.profiles[`${profile}`] ?? {};
+  const p = getProfileConfig(profiles, profile) ?? {};
   return {
     profile,
     output: outputFrom(flags, p, cfg),

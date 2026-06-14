@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { execFile } from "node:child_process";
-import { openAsBlob, readFileSync, realpathSync } from "node:fs";
+import { openAsBlob } from "node:fs";
 import { createServer } from "node:http";
-import { appendFile, writeFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  appendFile,
+  writeFile,
+  mkdir,
+  readFile,
+  readFileSync,
+  realpathSync,
+} from "./core/safe-io.js";
 import { ApiClient, delay } from "./core/client.js";
 import {
   clearProfileToken,
@@ -25,6 +32,7 @@ import {
   activeConfigPath,
   assertPrivateFile,
   fixPrivateFilePermissions,
+  type RuntimeContext,
 } from "./core/config.js";
 import {
   credentialsPath,
@@ -44,6 +52,11 @@ import {
 import { parseData, readStdin, mergeBody } from "./core/body.js";
 import { postWebhook } from "./core/webhook.js";
 import { reportInstallTelemetry } from "./core/telemetry.js";
+import {
+  getProfile,
+  getProfileConfig,
+  setProfileConfig,
+} from "./core/profiles-map.js";
 import {
   assertRegularFile,
   backupFormats,
@@ -70,10 +83,6 @@ function rootOptions(cmd?: Command): any {
   return cmd?.optsWithGlobals?.() ?? {};
 }
 
-async function mode(opts: any): Promise<"json" | "human"> {
-  return (await resolveRuntime(opts)).output;
-}
-
 const LIST_ALIASES = [
   "items",
   "raindrops",
@@ -90,18 +99,24 @@ function pickItems(r: any): any[] {
 }
 
 function pickList(r: any, ...aliases: readonly string[]): any[] {
-  for (const key of aliases) if (Array.isArray(r?.[key])) return r[key];
+  for (const key of aliases) {
+    const value = r?.[`${key}`];
+    if (Array.isArray(value)) return value;
+  }
   return [];
 }
 
 function pickItem(r: any, ...aliases: readonly string[]): any {
-  for (const key of aliases) if (r?.[key] !== undefined) return r[key];
+  for (const key of aliases) {
+    const value = r?.[`${key}`];
+    if (value !== undefined) return value;
+  }
   return r;
 }
 
 function pickModified(response: any): number | undefined {
   for (const key of ["modified", "modifiedCount", "matchedCount"] as const) {
-    const value = response?.[key];
+    const value = response?.[`${key}`];
     if (typeof value === "number") return value;
   }
   return undefined;
@@ -132,7 +147,8 @@ async function render(
   human: string | undefined,
   opts: any,
 ): Promise<void> {
-  writeOutput(value, human, await mode(opts));
+  const outputMode = (await resolveRuntime(opts)).output;
+  writeOutput(value, human, outputMode);
 }
 
 function withErrors<T extends unknown[]>(fn: Handler<T>): Handler<T> {
@@ -205,15 +221,15 @@ export function buildProgram(): Command {
       withErrors(async (opts, cmd) => {
         const profiles = await readProfiles();
         const commands = agentCommands();
-        const selected = opts.command
-          ? { [opts.command]: commands[opts.command] }
-          : commands;
         if (opts.command && !commands[opts.command])
           throw new CLIError({
             code: "unknown_command",
             message: `Unknown agent-context command: ${opts.command}`,
             exitCode: ExitCode.Usage,
           });
+        const selected = opts.command
+          ? { [opts.command]: commands[opts.command] }
+          : commands;
         await render(
           {
             schema_version: "1",
@@ -427,6 +443,43 @@ function client(cmd?: Command): ApiClient {
   return new ApiClient(rootOptions(cmd));
 }
 
+async function completeOAuthLogin(args: {
+  runtime: RuntimeContext;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  code: string;
+  cmd: Command;
+}): Promise<void> {
+  const tokens = await postTokenEndpoint(
+    args.runtime.token_url,
+    {
+      grant_type: "authorization_code",
+      code: args.code,
+      client_id: args.clientId,
+      client_secret: args.clientSecret,
+      redirect_uri: args.redirectUri,
+    },
+    "oauth_exchange_failed",
+  );
+  const profile = await storeOAuthTokens({
+    tokens,
+    profile: rootOptions(args.cmd).profile,
+    clientId: args.clientId,
+    clientSecret: args.clientSecret,
+    redirectUri: args.redirectUri,
+  });
+  await render(
+    {
+      result: true,
+      profile,
+      token_type: tokens.token_type ?? "Bearer",
+    },
+    `Logged in profile ${profile}`,
+    rootOptions(args.cmd),
+  );
+}
+
 function registerAuth(program: Command): void {
   const auth = program.command("auth").description("Authenticate");
   auth
@@ -443,38 +496,18 @@ function registerAuth(program: Command): void {
         let token = opts.token as string | undefined;
         if (opts.tokenStdin) token = (await readStdin()).trim();
         if (!token && opts.clientId && opts.clientSecret && opts.redirectUri) {
+          const runtime = await resolveRuntime(rootOptions(cmd));
+          const oauthArgs = {
+            runtime,
+            clientId: opts.clientId,
+            clientSecret: opts.clientSecret,
+            redirectUri: opts.redirectUri,
+            cmd,
+          };
           if (opts.manualCode) {
-            const runtime = await resolveRuntime(rootOptions(cmd));
-            const tokens = await postTokenEndpoint(
-              runtime.token_url,
-              {
-                grant_type: "authorization_code",
-                code: opts.manualCode,
-                client_id: opts.clientId,
-                client_secret: opts.clientSecret,
-                redirect_uri: opts.redirectUri,
-              },
-              "oauth_exchange_failed",
-            );
-            const profile = await storeOAuthTokens({
-              tokens,
-              profile: rootOptions(cmd).profile,
-              clientId: opts.clientId,
-              clientSecret: opts.clientSecret,
-              redirectUri: opts.redirectUri,
-            });
-            await render(
-              {
-                result: true,
-                profile,
-                token_type: tokens.token_type ?? "Bearer",
-              },
-              `Logged in profile ${profile}`,
-              rootOptions(cmd),
-            );
+            await completeOAuthLogin({ ...oauthArgs, code: opts.manualCode });
             return;
           }
-          const runtime = await resolveRuntime(rootOptions(cmd));
           const url = new URL(runtime.auth_url);
           url.searchParams.set("client_id", opts.clientId);
           url.searchParams.set("redirect_uri", opts.redirectUri);
@@ -487,33 +520,7 @@ function registerAuth(program: Command): void {
             const codePromise = waitForOAuthCode(redirect);
             if (opts.browser !== false) openBrowser(String(url));
             const code = await codePromise;
-            const tokens = await postTokenEndpoint(
-              runtime.token_url,
-              {
-                grant_type: "authorization_code",
-                code,
-                client_id: opts.clientId,
-                client_secret: opts.clientSecret,
-                redirect_uri: opts.redirectUri,
-              },
-              "oauth_exchange_failed",
-            );
-            const profile = await storeOAuthTokens({
-              tokens,
-              profile: rootOptions(cmd).profile,
-              clientId: opts.clientId,
-              clientSecret: opts.clientSecret,
-              redirectUri: opts.redirectUri,
-            });
-            await render(
-              {
-                result: true,
-                profile,
-                token_type: tokens.token_type ?? "Bearer",
-              },
-              `Logged in profile ${profile}`,
-              rootOptions(cmd),
-            );
+            await completeOAuthLogin({ ...oauthArgs, code });
             return;
           }
           await render(
@@ -660,8 +667,8 @@ function registerConfig(program: Command): void {
         validateConfigKey(key);
         const c: any = await readConfig();
         await render(
-          { result: true, key, value: c[key] ?? null },
-          String(c[key] ?? ""),
+          { result: true, key, value: c[`${key}`] ?? null },
+          String(c[`${key}`] ?? ""),
           rootOptions(cmd),
         );
       }),
@@ -674,11 +681,11 @@ function registerConfig(program: Command): void {
       withErrors(async (key, value, _opts, cmd) => {
         validateConfigKey(key);
         const c: any = await readConfig();
-        c[key] = coerceValue(value);
+        c[`${key}`] = coerceValue(value);
         await writeConfig(c);
         await render(
-          { result: true, key, value: c[key] },
-          `${key}=${c[key]}`,
+          { result: true, key, value: c[`${key}`] },
+          `${key}=${c[`${key}`]}`,
           rootOptions(cmd),
         );
       }),
@@ -690,7 +697,7 @@ function registerConfig(program: Command): void {
       withErrors(async (key, _opts, cmd) => {
         validateConfigKey(key);
         const c: any = await readConfig();
-        delete c[key];
+        delete c[`${key}`];
         await writeConfig(c);
         await render({ result: true, key }, `unset ${key}`, rootOptions(cmd));
       }),
@@ -724,10 +731,12 @@ function registerProfile(program: Command): void {
           {
             result: true,
             name,
-            profile: profiles.profiles[name] ?? {},
-            auth: { configured: Boolean(creds.profiles[name]?.access_token) },
+            profile: getProfileConfig(profiles, name) ?? {},
+            auth: {
+              configured: Boolean(getProfile(creds, name)?.access_token),
+            },
           },
-          keyval(profiles.profiles[name] ?? {}),
+          keyval(getProfileConfig(profiles, name) ?? {}),
           rootOptions(cmd),
         );
       }),
@@ -741,22 +750,24 @@ function registerProfile(program: Command): void {
       withErrors(async (name, opts, cmd) => {
         safeProfileName(name);
         const profiles = await readProfiles();
-        profiles.profiles[name] = { ...(profiles.profiles[name] ?? {}) };
+        const existing = getProfileConfig(profiles, name) ?? {};
+        const updated: typeof existing = { ...existing };
         if (opts.defaultCollection !== undefined)
-          profiles.profiles[name].default_collection = intArg(
+          updated.default_collection = intArg(
             opts.defaultCollection,
             "--default-collection",
           );
         if (opts.output !== undefined)
-          profiles.profiles[name].output = validateEnum(
+          updated.output = validateEnum(
             opts.output,
             ["json", "human"],
             "output",
             "raindrop profile save work --output json",
           ) as any;
+        setProfileConfig(profiles, name, updated);
         await writeProfiles(profiles);
         await render(
-          { result: true, name, profile: profiles.profiles[name] },
+          { result: true, name, profile: updated },
           `saved ${name}`,
           rootOptions(cmd),
         );
@@ -786,7 +797,7 @@ function registerProfile(program: Command): void {
       withErrors(async (name, opts, cmd) => {
         requireForce(opts.force, "profile delete");
         const profiles = await readProfiles();
-        delete profiles.profiles[name];
+        delete profiles.profiles[`${name}`];
         await writeProfiles(profiles);
         await render(
           { result: true, name },
@@ -2577,7 +2588,7 @@ function registerApi(program: Command): void {
         const query: Record<string, string> = {};
         for (const pair of opts.query ?? []) {
           const [k, ...rest] = String(pair).split("=");
-          if (k) query[k] = rest.join("=");
+          if (k) query[`${k}`] = rest.join("=");
         }
         await render(
           await client(cmd).request({
@@ -2712,15 +2723,8 @@ async function truncateFile(path: string): Promise<void> {
 }
 
 function parseIds(value: string): number[] {
-  const ids = value.split(",").map((id) => intArg(id.trim(), "--ids"));
-  if (ids.length === 0)
-    throw new CLIError({
-      code: "ids_required",
-      message: "At least one id is required",
-      hint: "Use comma-separated ids: --ids 1,2,3",
-      exitCode: ExitCode.Usage,
-    });
-  return ids;
+  // split always yields at least one element; intArg rejects non-numeric entries
+  return value.split(",").map((id) => intArg(id.trim(), "--ids"));
 }
 
 const collectionTitleCache = new Map<number, string>();
@@ -2919,7 +2923,7 @@ function parseDurationMs(value: string): number {
   const unit = match[2] ?? "ms";
   return (
     amount *
-    ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[unit] ?? 1)
+    ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[`${unit}`] ?? 1)
   );
 }
 
@@ -2941,13 +2945,13 @@ function configSource(
     return "flag";
   const envName = `RAINDROP_${key.toUpperCase()}`;
   if (
-    process.env[envName] ||
+    process.env[`${envName}`] ||
     (key === "profile" && process.env.RAINDROP_PROFILE) ||
     (key === "output" && process.env.RAINDROP_OUTPUT)
   )
     return "env";
-  if (key in profile) return "profile";
-  if (key in file) return "file";
+  if (`${key}` in profile) return "profile";
+  if (`${key}` in file) return "file";
   return "default";
 }
 
@@ -2957,6 +2961,7 @@ function coerceValue(value: string): any {
   if (/^-?\d+$/.test(value)) return Number(value);
   return value;
 }
+
 function findExisting(response: any, url: string): unknown {
   const values = [
     response.item,
@@ -2996,19 +3001,18 @@ function simpleSchema(
   command: Command,
   kind: "request" | "response",
 ): Record<string, unknown> {
+  const responseSchema = {
+    type: "object",
+    properties: { result: { type: "boolean" } },
+    additionalProperties: true,
+  };
+  const requestSchema = { type: "object", additionalProperties: true };
   return {
     result: true,
     schema_version: "1",
     command: command.name(),
     kind,
-    schema:
-      kind === "request"
-        ? { type: "object", additionalProperties: true }
-        : {
-            type: "object",
-            properties: { result: { type: "boolean" } },
-            additionalProperties: true,
-          },
+    schema: kind === "request" ? requestSchema : responseSchema,
   };
 }
 

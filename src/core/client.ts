@@ -1,7 +1,7 @@
-import { createWriteStream } from "node:fs";
-import { Readable } from "node:stream";
-import { mkdir, rename, stat, rm } from "node:fs/promises";
+import { createWriteStream, mkdir, rename, stat, rm } from "./safe-io.js";
+import { randomInt } from "node:crypto";
 import { dirname, basename, join } from "node:path";
+import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import {
   maybeProactiveRefresh,
@@ -54,8 +54,7 @@ export class ApiClient {
 
     let lastResponse: Response | undefined;
     for (let attempt = 0; attempt <= runtime.max_retries; attempt++) {
-      const init: RequestInit = { method: options.method, headers };
-      if (body !== undefined) init.body = body;
+      const init = buildRequestInit(options.method, headers, body);
       if (this.globalOptions.debug)
         process.stderr.write(
           `${JSON.stringify({ debug: { method: options.method, url: String(url), operation: options.operationName } })}\n`,
@@ -69,10 +68,8 @@ export class ApiClient {
         );
         if (refreshed) {
           headers.set("Authorization", `Bearer ${refreshed}`);
-          const retryInit: RequestInit = { method: options.method, headers };
-          if (body !== undefined) retryInit.body = body;
           return await this.handleResponse(
-            await fetch(url, retryInit),
+            await fetch(url, buildRequestInit(options.method, headers, body)),
             options,
           );
         }
@@ -246,9 +243,17 @@ function backoffMs(attempt: number, response: Response): number {
     const seconds = Number(reset);
     if (seconds > 0 && seconds < 120) return seconds * 1000;
   }
-  return Math.min(10_000, 500 * 2 ** attempt) + Math.floor(Math.random() * 100);
+  return Math.min(10_000, 500 * 2 ** attempt) + randomInt(100);
 }
 
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildRequestInit(
+  method: HttpMethod,
+  headers: Headers,
+  body: BodyInit | undefined,
+): RequestInit {
+  return body === undefined ? { method, headers } : { method, headers, body };
 }

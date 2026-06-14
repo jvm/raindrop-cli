@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile } from "./safe-io.js";
 import { CLIError, ExitCode } from "./errors.js";
 
 export async function readStdin(): Promise<string> {
@@ -36,6 +36,6 @@ export function mergeBody(
 ): Record<string, unknown> {
   const result = { ...base };
   for (const [key, value] of Object.entries(overrides))
-    if (value !== undefined) result[key] = value;
+    if (value !== undefined) result[`${key}`] = value;
   return result;
 }

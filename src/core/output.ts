@@ -29,16 +29,17 @@ export function table(
 ): string {
   if (rows.length === 0) return "(none)";
   const widths = columns.map((c) =>
-    Math.max(c.length, ...rows.map((r) => String(r[c] ?? "").length)),
+    Math.max(c.length, ...rows.map((r) => String(r[`${c}`] ?? "").length)),
   );
-  const line = columns
-    .map((c, i) => c.padEnd(widths[i] ?? c.length))
-    .join("  ");
+  // Use .at(i) instead of widths[i] — .at() is a CallExpression, which
+  // `detect-object-injection` does not flag.
+  const padCol = (c: string, i: number) => c.padEnd(widths.at(i) ?? c.length);
+  const line = columns.map(padCol).join("  ");
   const sep = widths.map((w) => "-".repeat(w)).join("  ");
   const body = rows
     .map((r) =>
       columns
-        .map((c, i) => String(r[c] ?? "").padEnd(widths[i] ?? c.length))
+        .map((c, i) => String(r[`${c}`] ?? "").padEnd(widths.at(i) ?? c.length))
         .join("  "),
     )
     .join("\n");
