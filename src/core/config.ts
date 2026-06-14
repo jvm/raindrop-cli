@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { parse, stringify } from "smol-toml";
 import { CLIError, ExitCode } from "./errors.js";
 import { configPath, credentialsPath, profilesPath } from "./paths.js";
+import { safeProfileName } from "./validators.js";
 
 export type Config = {
   output?: "json" | "human";
@@ -94,6 +95,50 @@ function windowsOwnerPrincipal(): string | undefined {
   return domain ? `${domain}\\${user}` : user;
 }
 
+/**
+ * Pull the principal name from a single icacls output line.
+ *   "  C:\path\file.txt:(F)"                    -> "C:\path\file.txt"
+ *   "  C:\path\file.txt BUILTIN\Admins:(F)"     -> "BUILTIN\Admins"
+ *   "        NT AUTHORITY\SYSTEM:(F)"            -> "AUTHORITY\SYSTEM"
+ * icacls repeats the file path before the principal. The original
+ * (regex-based) implementation skipped the first whitespace-separated
+ * token when it was followed by a space. We replicate that with a
+ * linear scan, no regex.
+ */
+function extractIcaclsPrincipal(line: string): string | null {
+  // Skip leading whitespace.
+  let i = 0;
+  while (i < line.length && isAsciiWhitespace(line.charCodeAt(i))) i++;
+  if (i >= line.length) return null;
+  // Find the first whitespace or ":(" anchor.
+  let end = i;
+  while (end < line.length) {
+    const c = line.charCodeAt(end);
+    if (isAsciiWhitespace(c)) break;
+    if (c === 0x3a /* ":" */ && line.charCodeAt(end + 1) === 0x28 /* "(" */)
+      break;
+    end++;
+  }
+  // The original regex's optional group `(?:\S.*?\s)?` matches only
+  // when followed by a space. So: if the first run was terminated by
+  // whitespace (the file-path prefix case), skip it and capture the
+  // next token up to ":(". Otherwise the first run IS the principal.
+  if (end < line.length && isAsciiWhitespace(line.charCodeAt(end))) {
+    i = end;
+    while (i < line.length && isAsciiWhitespace(line.charCodeAt(i))) i++;
+  }
+  if (i >= line.length) return null;
+  const colonParen = line.indexOf(":(", i);
+  if (colonParen === -1) return null;
+  const principal = line.slice(i, colonParen).trim();
+  return principal.length > 0 ? principal : null;
+}
+
+function isAsciiWhitespace(code: number): boolean {
+  // space, tab, carriage return, line feed
+  return code === 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
+}
+
 export async function fixPrivateFilePermissions(path: string): Promise<void> {
   if (process.platform === "win32") await setWindowsOwnerOnlyAcl(path);
   else await chmod(path, 0o600);
@@ -130,12 +175,11 @@ async function assertWindowsOwnerOnly(path: string): Promise<void> {
   }
   if (result.status !== 0 || !result.stdout) return;
   const stdout = String(result.stdout);
-  const lines = stdout.split(/\r?\n/).filter((line) => /:\(/.test(line));
+  const lines = stdout
+    .split(/\r?\n/)
+    .filter((line) => line.indexOf(":(") !== -1);
   const principals = lines
-    .map((line) => {
-      const match = /^\s*(?:\S.*?\s)?(\S.*?):\(/.exec(line);
-      return match && match[1] ? match[1].trim() : null;
-    })
+    .map(extractIcaclsPrincipal)
     .filter(
       (principal): principal is string =>
         Boolean(principal) && principal !== path,
@@ -217,10 +261,14 @@ export async function writeProfiles(
 }
 
 export async function activeProfileName(explicit?: string): Promise<string> {
-  if (explicit) return explicit;
-  if (process.env.RAINDROP_PROFILE) return process.env.RAINDROP_PROFILE;
+  // Validate every source so profile keys can never collide with prototype
+  // properties (__proto__, constructor, ...) on the credentials map.
+  if (explicit) return safeProfileName(explicit);
+  if (process.env.RAINDROP_PROFILE) {
+    return safeProfileName(process.env.RAINDROP_PROFILE);
+  }
   const cfg = await readConfig();
-  return cfg.active_profile ?? "default";
+  return safeProfileName(cfg.active_profile ?? "default");
 }
 
 export type RuntimeContext = Required<
@@ -250,13 +298,11 @@ async function buildRuntime(
   flags: Record<string, unknown>,
 ): Promise<RuntimeContext> {
   const cfg = await readConfig();
-  const profile =
-    (typeof flags.profile === "string" ? flags.profile : undefined) ??
-    process.env.RAINDROP_PROFILE ??
-    cfg.active_profile ??
-    "default";
+  const profile = await activeProfileName(
+    typeof flags.profile === "string" ? flags.profile : undefined,
+  );
   const profiles = await readProfiles();
-  const p = profiles.profiles[profile] ?? {};
+  const p = profiles.profiles[`${profile}`] ?? {};
   return {
     profile,
     output: outputFrom(flags, p, cfg),

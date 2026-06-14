@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "./safe-io.js";
 import { CLIError, ExitCode } from "./errors.js";
 
 export const bookmarkSorts = [
@@ -99,6 +99,16 @@ export function safeProfileName(name: string): string {
       code: "invalid_profile",
       message:
         "Profile names must use only letters, numbers, dot, underscore, and dash",
+      exitCode: ExitCode.Usage,
+    });
+  }
+  // Block names that would alias Object.prototype keys when used as a
+  // record key on the credentials map. "constructor" / "hasOwnProperty" /
+  // "toString" etc. would otherwise read from the prototype chain.
+  if (name === "__proto__" || name === "prototype" || name === "constructor") {
+    throw new CLIError({
+      code: "invalid_profile",
+      message: `Reserved profile name: ${name}`,
       exitCode: ExitCode.Usage,
     });
   }
