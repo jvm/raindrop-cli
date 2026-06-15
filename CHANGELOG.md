@@ -67,3 +67,11 @@ This project aims to follow [Semantic Versioning](https://semver.org/). Breaking
 - Authentication, profile, config, user, collection, bookmark, tag, highlight, import, export, backup, jobs, feedback, doctor, agent-context, raw API, completion, and update command surfaces.
 - Safety guard requiring `--force` for destructive operations.
 - Mock-based test suite and CI workflows.
+
+[Unreleased]: https://github.com/jvm/raindrop-cli/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/jvm/raindrop-cli/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/jvm/raindrop-cli/compare/v0.2.1...v0.2.3
+[0.2.1]: https://github.com/jvm/raindrop-cli/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/jvm/raindrop-cli/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/jvm/raindrop-cli/compare/8b678e0...v0.1.1
+[0.1.0]: https://github.com/jvm/raindrop-cli/commit/8b678e0
