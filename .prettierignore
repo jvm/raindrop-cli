@@ -7,3 +7,6 @@ CHANGELOG.md
 
 # Generated code
 src/generated/
+
+# Pi extension (maintainer tool, loaded by jiti at runtime, not part of the published package)
+.pi/extensions/
